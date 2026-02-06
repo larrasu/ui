@@ -31,10 +31,18 @@
       ]
     },
     {
+      "groupName": "tiptap",
+      "matchPackageNames": [
+        "@tiptap/*"
+      ]
+    },
+    {
       "groupName": "vite",
       "matchPackageNames": [
+        "@vitejs/plugin-vue",
         "vite",
-        "@vitejs/plugin-vue"
+        "vue",
+        "vue-router"
       ]
     },
     {

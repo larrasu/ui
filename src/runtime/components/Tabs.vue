@@ -1,5 +1,6 @@
 <!-- eslint-disable vue/block-tag-newline -->
 <script lang="ts">
+import type { ComponentPublicInstance } from 'vue'
 import type { TabsRootProps, TabsRootEmits } from 'reka-ui'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/tabs'
@@ -54,12 +55,17 @@ export interface TabsProps<T extends TabsItem = TabsItem> extends Pick<TabsRootP
    * The orientation of the tabs.
    * @defaultValue 'horizontal'
    */
-  orientation?: TabsRootProps['orientation']
+  orientation?: Tabs['variants']['orientation']
   /**
    * The content of the tabs, can be disabled to prevent rendering the content.
    * @defaultValue true
    */
   content?: boolean
+  /**
+   * The key used to get the value from the item.
+   * @defaultValue 'value'
+   */
+  valueKey?: GetItemKeys<T>
   /**
    * The key used to get the label from the item.
    * @defaultValue 'label'
@@ -85,7 +91,6 @@ export type TabsSlots<T extends TabsItem = TabsItem> = {
 </script>
 
 <script setup lang="ts" generic="T extends TabsItem">
-import type { ComponentPublicInstance } from 'vue'
 import { ref, computed } from 'vue'
 import { TabsRoot, TabsList, TabsIndicator, TabsTrigger, TabsContent, useForwardPropsEmits } from 'reka-ui'
 import { reactivePick } from '@vueuse/core'
@@ -101,6 +106,7 @@ const props = withDefaults(defineProps<TabsProps<T>>(), {
   defaultValue: '0',
   orientation: 'horizontal',
   unmountOnHide: true,
+  valueKey: 'value',
   labelKey: 'label'
 })
 const emits = defineEmits<TabsEmits>()
@@ -131,10 +137,11 @@ defineExpose({
     :default-value="defaultValue"
     :orientation="orientation"
     :activation-mode="activationMode"
+    data-slot="root"
     :class="ui.root({ class: [props.ui?.root, props.class] })"
   >
-    <TabsList :class="ui.list({ class: props.ui?.list })">
-      <TabsIndicator :class="ui.indicator({ class: props.ui?.indicator })" />
+    <TabsList data-slot="list" :class="ui.list({ class: props.ui?.list })">
+      <TabsIndicator data-slot="indicator" :class="ui.indicator({ class: props.ui?.indicator })" />
 
       <slot name="list-leading" />
 
@@ -142,16 +149,17 @@ defineExpose({
         v-for="(item, index) of items"
         :key="index"
         :ref="el => (triggersRef[index] = el as ComponentPublicInstance)"
-        :value="item.value ?? String(index)"
+        :value="get(item, props.valueKey as string) ?? String(index)"
         :disabled="item.disabled"
+        data-slot="trigger"
         :class="ui.trigger({ class: [props.ui?.trigger, item.ui?.trigger] })"
       >
         <slot name="leading" :item="item" :index="index" :ui="ui">
-          <UIcon v-if="item.icon" :name="item.icon" :class="ui.leadingIcon({ class: [props.ui?.leadingIcon, item.ui?.leadingIcon] })" />
-          <UAvatar v-else-if="item.avatar" :size="((item.ui?.leadingAvatarSize || props.ui?.leadingAvatarSize || ui.leadingAvatarSize()) as AvatarProps['size'])" v-bind="item.avatar" :class="ui.leadingAvatar({ class: [props.ui?.leadingAvatar, item.ui?.leadingAvatar] })" />
+          <UIcon v-if="item.icon" :name="item.icon" data-slot="leadingIcon" :class="ui.leadingIcon({ class: [props.ui?.leadingIcon, item.ui?.leadingIcon] })" />
+          <UAvatar v-else-if="item.avatar" :size="((item.ui?.leadingAvatarSize || props.ui?.leadingAvatarSize || ui.leadingAvatarSize()) as AvatarProps['size'])" v-bind="item.avatar" data-slot="leadingAvatar" :class="ui.leadingAvatar({ class: [props.ui?.leadingAvatar, item.ui?.leadingAvatar] })" />
         </slot>
 
-        <span v-if="get(item, props.labelKey as string) || !!slots.default" :class="ui.label({ class: [props.ui?.label, item.ui?.label] })">
+        <span v-if="get(item, props.labelKey as string) || !!slots.default" data-slot="label" :class="ui.label({ class: [props.ui?.label, item.ui?.label] })">
           <slot :item="item" :index="index">{{ get(item, props.labelKey as string) }}</slot>
         </span>
 
@@ -162,6 +170,7 @@ defineExpose({
             variant="outline"
             :size="((item.ui?.trailingBadgeSize || props.ui?.trailingBadgeSize || ui.trailingBadgeSize()) as BadgeProps['size'])"
             v-bind="(typeof item.badge === 'string' || typeof item.badge === 'number') ? { label: item.badge } : item.badge"
+            data-slot="trailingBadge"
             :class="ui.trailingBadge({ class: [props.ui?.trailingBadge, item.ui?.trailingBadge] })"
           />
         </slot>
@@ -171,7 +180,7 @@ defineExpose({
     </TabsList>
 
     <template v-if="!!content">
-      <TabsContent v-for="(item, index) of items" :key="index" :value="item.value ?? String(index)" :class="ui.content({ class: [props.ui?.content, item.ui?.content, item.class] })">
+      <TabsContent v-for="(item, index) of items" :key="index" :value="get(item, props.valueKey as string) ?? String(index)" data-slot="content" :class="ui.content({ class: [props.ui?.content, item.ui?.content, item.class] })">
         <slot :name="((item.slot || 'content') as keyof TabsSlots<T>)" :item="(item as Extract<T, { slot: string; }>)" :index="index" :ui="ui">
           {{ item.content }}
         </slot>

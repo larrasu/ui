@@ -24,6 +24,8 @@ ignore:
   - items
 external:
   - items
+externalTypes:
+  - NavigationMenuItem[]
 props:
   items:
     - label: Guide
@@ -92,7 +94,7 @@ props:
           to: /docs/components/progress
     - label: GitHub
       icon: i-simple-icons-github
-      badge: 3.8k
+      badge: 6k
       to: https://github.com/nuxt/ui
       target: _blank
     - label: Help
@@ -203,7 +205,7 @@ props:
           to: /docs/components/progress
     - label: GitHub
       icon: i-simple-icons-github
-      badge: 3.8k
+      badge: 6k
       to: https://github.com/nuxt/ui
       target: _blank
     - label: Help
@@ -316,7 +318,7 @@ props:
             to: /docs/components/progress
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
       - label: Help
@@ -428,7 +430,7 @@ props:
             to: /docs/components/progress
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
       - label: Help
@@ -524,7 +526,7 @@ props:
             to: /docs/components/progress
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
       - label: Help
@@ -570,7 +572,7 @@ props:
         active: true
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
   class: 'w-full'
@@ -607,7 +609,7 @@ props:
         active: true
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
   class: 'w-full'
@@ -1070,13 +1072,13 @@ props:
             to: /docs/components/progress
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
         tooltip:
           text: 'Open on GitHub'
           kbds:
-            - 3.8k
+            - 6k
       - label: Help
         icon: i-lucide-circle-help
         disabled: true
@@ -1177,13 +1179,13 @@ props:
             to: /docs/components/progress
     - - label: GitHub
         icon: i-simple-icons-github
-        badge: 3.8k
+        badge: 6k
         to: https://github.com/nuxt/ui
         target: _blank
         tooltip:
           text: 'Open on GitHub'
           kbds:
-            - 3.8k
+            - 6k
       - label: Help
         icon: i-lucide-circle-help
         disabled: true
@@ -1196,7 +1198,7 @@ You can use the `#content` slot to customize the content of the popover in the `
 
 ### Control active item
 
-You can control the active item by using the `default-value` prop or the `v-model` directive with the index of the item.
+You can control the active item(s) by using the `default-value` prop or the `v-model` directive with the `value` of the item. If no `value` is provided, it defaults to `item-${index}` for top-level items or `item-${level}-${index}` for nested items.
 
 ::component-example
 ---
@@ -1205,12 +1207,12 @@ name: 'navigation-menu-model-value-example'
 ---
 ::
 
-::note
-In this example, leveraging [`defineShortcuts`](/docs/composables/define-shortcuts), you can switch the active item by pressing :kbd{value="1"}, :kbd{value="2"}, or :kbd{value="3"}.
+::tip
+Use the `value-key` prop to change the key used to match items when a `v-model` or `default-value` is provided.
 ::
 
-::tip
-You can also pass the `value` of one of the items if provided.
+::note
+In this example, leveraging [`defineShortcuts`](/docs/composables/define-shortcuts), you can switch the active item by pressing :kbd{value="1"}, :kbd{value="2"}, or :kbd{value="3"}.
 ::
 
 ### With custom slot
