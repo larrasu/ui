@@ -1,17 +1,17 @@
 import { defuFn } from 'defu'
 import type { ModuleOptions } from '../module'
 import input from './input'
-import { fieldGroupVariant } from './field-group'
+import { fieldGroupVariantWithHiddenInput } from './field-group'
 
 export default (options: Required<ModuleOptions>) => {
   return defuFn({
     slots: {
       root: () => undefined,
-      base: () => ['relative group rounded-md inline-flex items-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-75', options.theme.transitions && 'transition-colors'],
+      base: () => ['relative group rounded-md inline-flex items-center disabled:cursor-not-allowed disabled:opacity-75', options.theme.transitions && 'transition-colors'],
       value: 'truncate pointer-events-none',
       placeholder: 'truncate text-dimmed',
-      arrow: 'fill-default',
-      content: 'max-h-60 w-(--reka-select-trigger-width) bg-default shadow-lg rounded-md ring ring-default overflow-hidden data-[state=open]:animate-[scale-in_100ms_ease-out] data-[state=closed]:animate-[scale-out_100ms_ease-in] origin-(--reka-select-content-transform-origin) pointer-events-auto flex flex-col',
+      arrow: 'fill-bg stroke-default',
+      content: 'max-h-[min(15rem,var(--reka-select-content-available-height,15rem))] w-(--reka-select-trigger-width) bg-default shadow-lg rounded-md ring ring-default overflow-hidden origin-(--reka-select-content-transform-origin) pointer-events-auto data-[state=closed]:pointer-events-none! flex flex-col',
       viewport: 'relative divide-y divide-default scroll-py-1 overflow-y-auto flex-1',
       group: 'p-1 isolate',
       empty: 'text-center text-muted',
@@ -30,7 +30,12 @@ export default (options: Required<ModuleOptions>) => {
       itemDescription: 'truncate text-muted'
     },
     variants: {
-      ...fieldGroupVariant,
+      ...fieldGroupVariantWithHiddenInput,
+      variant: (prev: Record<string, string>) => ({
+        ...prev,
+        outline: [prev.outline, 'hover:bg-elevated disabled:bg-default'].join(' '),
+        subtle: [prev.subtle, 'hover:bg-accented/75 disabled:bg-elevated'].join(' ')
+      }),
       size: {
         xs: {
           label: 'p-1 text-[10px]/3 gap-1',
@@ -40,7 +45,7 @@ export default (options: Required<ModuleOptions>) => {
           itemLeadingChip: 'size-4',
           itemLeadingChipSize: 'sm',
           itemTrailingIcon: 'size-4',
-          empty: 'p-1 text-xs'
+          empty: 'p-2 text-xs'
         },
         sm: {
           label: 'p-1.5 text-[10px]/3 gap-1.5',
@@ -50,7 +55,7 @@ export default (options: Required<ModuleOptions>) => {
           itemLeadingChip: 'size-4',
           itemLeadingChipSize: 'sm',
           itemTrailingIcon: 'size-4',
-          empty: 'p-1.5 text-xs'
+          empty: 'p-2.5 text-xs'
         },
         md: {
           label: 'p-1.5 text-xs gap-1.5',
@@ -60,7 +65,7 @@ export default (options: Required<ModuleOptions>) => {
           itemLeadingChip: 'size-5',
           itemLeadingChipSize: 'md',
           itemTrailingIcon: 'size-5',
-          empty: 'p-1.5 text-sm'
+          empty: 'p-2.5 text-sm'
         },
         lg: {
           label: 'p-2 text-xs gap-2',
@@ -70,7 +75,7 @@ export default (options: Required<ModuleOptions>) => {
           itemLeadingChip: 'size-5',
           itemLeadingChipSize: 'md',
           itemTrailingIcon: 'size-5',
-          empty: 'p-2 text-sm'
+          empty: 'p-3 text-sm'
         },
         xl: {
           label: 'p-2 text-sm gap-2',
@@ -80,18 +85,23 @@ export default (options: Required<ModuleOptions>) => {
           itemLeadingChip: 'size-6',
           itemLeadingChipSize: 'lg',
           itemTrailingIcon: 'size-6',
-          empty: 'p-2 text-base'
+          empty: 'p-3 text-base'
         }
+      },
+      position: {
+        'popper': {
+          content: 'data-[state=open]:animate-[scale-in_100ms_var(--ease-out)] data-[state=closed]:animate-[scale-out_100ms_var(--ease-out)]'
+        },
+        'item-aligned': {
+          content: ''
+        }
+      },
+      multiple: {
+        true: ''
       }
     },
-    compoundVariants: (prev: Record<string, any>[]) => prev.map(item => ({
-      ...item,
-      class: typeof item.class === 'string' ? replaceFocus(item.class) : item.class
-    }))
+    defaultVariants: {
+      position: 'popper'
+    }
   }, input(options))
-}
-
-function replaceFocus(str: string): string {
-  return str
-    .replace(/focus-visible:/g, 'focus:')
 }

@@ -6,25 +6,8 @@ const users = [
     to: 'https://github.com/benjamincanac',
     target: '_blank',
     avatar: {
-      src: 'https://github.com/benjamincanac.png'
-    }
-  },
-  {
-    label: 'Romain Hamel',
-    suffix: 'romhml',
-    to: 'https://github.com/romhml',
-    target: '_blank',
-    avatar: {
-      src: 'https://github.com/romhml.png'
-    }
-  },
-  {
-    label: 'Sébastien Chopin',
-    suffix: 'atinux',
-    to: 'https://github.com/atinux',
-    target: '_blank',
-    avatar: {
-      src: 'https://github.com/atinux.png'
+      src: 'https://github.com/benjamincanac.png',
+      loading: 'lazy' as const
     }
   },
   {
@@ -33,7 +16,28 @@ const users = [
     to: 'https://github.com/HugoRCD',
     target: '_blank',
     avatar: {
-      src: 'https://github.com/HugoRCD.png'
+      src: 'https://github.com/HugoRCD.png',
+      loading: 'lazy' as const
+    }
+  },
+  {
+    label: 'Sébastien Chopin',
+    suffix: 'atinux',
+    to: 'https://github.com/atinux',
+    target: '_blank',
+    avatar: {
+      src: 'https://github.com/atinux.png',
+      loading: 'lazy' as const
+    }
+  },
+  {
+    label: 'Romain Hamel',
+    suffix: 'romhml',
+    to: 'https://github.com/romhml',
+    target: '_blank',
+    avatar: {
+      src: 'https://github.com/romhml.png',
+      loading: 'lazy' as const
     }
   },
   {
@@ -42,16 +46,8 @@ const users = [
     to: 'https://github.com/sandros94',
     target: '_blank',
     avatar: {
-      src: 'https://github.com/sandros94.png'
-    }
-  },
-  {
-    label: 'Daniel Roe',
-    suffix: 'danielroe',
-    to: 'https://github.com/danielroe',
-    target: '_blank',
-    avatar: {
-      src: 'https://github.com/danielroe.png'
+      src: 'https://github.com/sandros94.png',
+      loading: 'lazy' as const
     }
   },
   {
@@ -60,16 +56,28 @@ const users = [
     to: 'https://github.com/J-Michalek',
     target: '_blank',
     avatar: {
-      src: 'https://github.com/J-Michalek.png'
+      src: 'https://github.com/J-Michalek.png',
+      loading: 'lazy' as const
     }
   },
   {
-    label: 'Eugen Istoc',
-    suffix: 'genu',
-    to: 'https://github.com/genu',
+    label: 'Alex',
+    suffix: 'hywax',
+    to: 'https://github.com/hywax',
     target: '_blank',
     avatar: {
-      src: 'https://github.com/genu.png'
+      src: 'https://github.com/hywax.png',
+      loading: 'lazy' as const
+    }
+  },
+  {
+    label: 'Maxime Pauvert',
+    suffix: 'maximepvrt',
+    to: 'https://github.com/maximepvrt',
+    target: '_blank',
+    avatar: {
+      src: 'https://github.com/maximepvrt.png',
+      loading: 'lazy' as const
     }
   }
 ]

@@ -1,7 +1,8 @@
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/prose/tabs'
-import type { TabsProps } from '../../types'
+import type { TabsProps } from '../Tabs.vue'
 import type { ComponentConfig } from '../../types/tv'
 
 type ProseTabs = ComponentConfig<typeof theme, AppConfig, 'tabs', 'ui.prose'>
@@ -25,28 +26,31 @@ export interface ProseTabsProps {
 }
 
 export interface ProseTabsSlots {
-  default(props?: {}): any
+  default(props?: {}): VNode[]
 }
 </script>
 
 <script setup lang="ts">
 import { computed, watch, onMounted, ref, onBeforeUpdate } from 'vue'
 import { useState, useAppConfig } from '#imports'
+import { useComponentProps } from '../../composables/useComponentProps'
 import { transformUI } from '../../utils'
 import { tv } from '../../utils/tv'
 import UTabs from '../Tabs.vue'
 
-const props = withDefaults(defineProps<ProseTabsProps>(), {
+const _props = withDefaults(defineProps<ProseTabsProps>(), {
   defaultValue: '0'
 })
 const slots = defineSlots<ProseTabsSlots>()
+
+const props = useComponentProps('prose.tabs', _props)
 
 const model = defineModel<string>()
 
 const appConfig = useAppConfig() as ProseTabs['AppConfig']
 
 // eslint-disable-next-line vue/no-dupe-keys
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.prose?.tabs || {}) }))
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.prose?.tabs || {}) }))
 
 const rerenderCount = ref(1)
 

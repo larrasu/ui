@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Markdown } from '@comark/vue'
+
 const content = `
 ![Nuxt UI v3](https://nuxt.com/assets/blog/nuxt-ui-v3.png)
 
@@ -59,7 +61,8 @@ const version = {
     name: 'Benjamin Canac',
     avatar: {
       src: 'https://github.com/benjamincanac.png',
-      alt: 'Benjamin Canac'
+      alt: 'Benjamin Canac',
+      loading: 'lazy' as const
     },
     to: 'https://github.com/benjamincanac',
     target: '_blank'
@@ -70,7 +73,7 @@ const version = {
 <template>
   <UChangelogVersion v-bind="version" :ui="{ container: 'max-w-lg' }" class="w-full">
     <template #body>
-      <MDC :value="version.content" />
+      <Markdown :value="version.content" />
     </template>
   </UChangelogVersion>
 </template>

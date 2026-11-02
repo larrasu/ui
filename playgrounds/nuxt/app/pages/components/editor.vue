@@ -454,7 +454,7 @@ const searchTerm = ref('')
 const searchTermDebounced = refDebounced(searchTerm, 200)
 
 const { data: mentionItems } = await useFetch('https://dummyjson.com/users/search?limit=10', {
-  params: { q: searchTermDebounced },
+  query: { q: searchTermDebounced },
   transform: (data: { users: { id: number, firstName: string, lastName: string, image: string }[] }) => {
     return data.users?.map(user => ({ id: user.id, label: `${user.firstName} ${user.lastName}`, avatar: { src: user.image } })) || []
   },
@@ -518,6 +518,12 @@ const emojiItems: EditorEmojiMenuItem[] = gitHubEmojis.filter(emoji => !emoji.na
       }"
     />
 
+    <UEditorSuggestionMenu :editor="editor" :items="suggestionItems" />
+
+    <UEditorMentionMenu v-model:search-term="searchTerm" :editor="editor" :items="mentionItems" ignore-filter />
+
+    <UEditorEmojiMenu :editor="editor" :items="emojiItems" />
+
     <UEditorDragHandle v-slot="{ ui, onClick }" :editor="editor" @node-change="selectedNode = $event">
       <UButton
         icon="i-lucide-plus"
@@ -552,9 +558,5 @@ const emojiItems: EditorEmojiMenuItem[] = gitHubEmojis.filter(emoji => !emoji.na
         />
       </UDropdownMenu>
     </UEditorDragHandle>
-
-    <UEditorSuggestionMenu :editor="editor" :items="suggestionItems" />
-    <UEditorMentionMenu v-model:search-term="searchTerm" :editor="editor" :items="mentionItems" ignore-filter />
-    <UEditorEmojiMenu :editor="editor" :items="emojiItems" />
   </UEditor>
 </template>

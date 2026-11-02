@@ -2,6 +2,8 @@
 title: ContextMenu
 description: A menu to display actions when right-clicking on an element.
 category: overlay
+keywords:
+  - right click menu
 links:
   - label: ContextMenu
     icon: i-custom-reka-ui
@@ -191,6 +193,7 @@ Use the `size` prop to change the size of the ContextMenu.
 ::component-code
 ---
 prettier: true
+collapse: true
 ignore:
   - items
   - ui.content
@@ -227,6 +230,7 @@ Use the `modal` prop to control whether the ContextMenu blocks interaction with 
 ::component-code
 ---
 prettier: true
+collapse: true
 ignore:
   - items
   - ui.content
@@ -264,6 +268,7 @@ Use the `disabled` prop to disable the ContextMenu.
 ::component-code
 ---
 prettier: true
+collapse: true
 ignore:
   - items
   - ui.content
@@ -316,8 +321,24 @@ You can use the `color` property to highlight certain items with a color.
 
 ::component-example
 ---
+collapse: true
 name: 'context-menu-color-items-example'
 ---
+::
+
+### Control open state :badge{label="4.12+" class="align-text-top"}
+
+You can control the open state by using the `v-model:open` directive. When opened programmatically, the menu is anchored to the trigger instead of the cursor.
+
+::component-example
+---
+collapse: true
+name: 'context-menu-open-example'
+---
+::
+
+::note
+In this example, leveraging [`defineShortcuts`](/docs/composables/define-shortcuts), you can toggle the ContextMenu by pressing :kbd{value="O"}.
 ::
 
 ### With custom slot
@@ -333,6 +354,7 @@ You will have access to the following slots:
 
 ::component-example
 ---
+collapse: true
 name: 'context-menu-custom-slot-example'
 ---
 ::

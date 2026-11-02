@@ -1,12 +1,16 @@
 import { defineComponent } from 'vue'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { ToastProvider } from 'reka-ui'
+import { renderEach } from '../component-render'
 import Toaster from '../../src/runtime/components/Toaster.vue'
 import Toast from '../../src/runtime/components/Toast.vue'
-import type { ToastProps, ToastSlots } from '../../src/runtime/components/Toast.vue'
-import ComponentRender from '../component-render'
+import { useToast } from '../../src/runtime/composables/useToast'
 import { ClientOnly } from '#components'
+
+// Reka UI keeps the close timer running after unmount, a 5s one fires once the test environment is gone
+const duration = 2 ** 31 - 1
 
 const ToastWrapper = defineComponent({
   components: {
@@ -15,7 +19,8 @@ const ToastWrapper = defineComponent({
     ClientOnly
   },
   inheritAttrs: false,
-  template: `<UToaster :portal="false">
+  setup: () => ({ duration }),
+  template: `<UToaster :portal="false" :duration="duration">
   <ClientOnly>
     <UToast v-bind="$attrs">
       <template v-for="(_, name) in $slots" #[name]="slotData">
@@ -29,19 +34,19 @@ const ToastWrapper = defineComponent({
 describe('Toast', () => {
   const props = { title: 'Toast' }
 
-  it.each([
+  renderEach(ToastWrapper, [
     // Props
     ['with title', { props }],
     ['with description', { props: { ...props, description: 'This is a toast' } }],
     ['with icon', { props: { ...props, icon: 'i-lucide-rocket' } }],
     ['with avatar', { props: { ...props, avatar: { src: 'https://github.com/benjamincanac.png' } } }],
     ['with actions', { props: { ...props, actions: [{ label: 'Action' }] } }],
-    ['with orientation vertical', { props: { ...props, icon: 'i-lucide-rocket', description: 'This is a toast', actions: [{ label: 'Action' }], orientation: 'vertical' as const } }],
-    ['with orientation horizontal', { props: { ...props, icon: 'i-lucide-rocket', description: 'This is a toast', actions: [{ label: 'Action' }], orientation: 'horizontal' as const } }],
+    ['with orientation vertical', { props: { ...props, icon: 'i-lucide-rocket', description: 'This is a toast', actions: [{ label: 'Action' }], orientation: 'vertical' } }],
+    ['with orientation horizontal', { props: { ...props, icon: 'i-lucide-rocket', description: 'This is a toast', actions: [{ label: 'Action' }], orientation: 'horizontal' } }],
     ['without close', { props: { ...props, close: false } }],
     ['with closeIcon', { props: { ...props, closeIcon: 'i-lucide-trash' } }],
-    ['with type', { props: { ...props, type: 'background' as const } }],
-    ['with color neutral', { props: { ...props, color: 'neutral' as const } }],
+    ['with type', { props: { ...props, type: 'background' } }],
+    ['with color neutral', { props: { ...props, color: 'neutral' } }],
     ['with as', { props: { ...props, as: 'section' } }],
     ['with class', { props: { ...props, class: 'bg-elevated/50' } }],
     ['with ui', { props: { ...props, ui: { title: 'font-bold' } } }],
@@ -50,9 +55,67 @@ describe('Toast', () => {
     ['with title slot', { props, slots: { title: () => 'Title slot' } }],
     ['with description slot', { props, slots: { description: () => 'Description slot' } }],
     ['with close slot', { props, slots: { close: () => 'Close slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: ToastProps, slots?: Partial<ToastSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, ToastWrapper)
-    expect(html).toMatchSnapshot()
+  ])
+
+  it('calls onClick once per click', async () => {
+    const onClick = vi.fn()
+    const toast = useToast()
+    toast.clear()
+
+    const wrapper = await mountSuspended(Toaster, { props: { portal: false, duration } })
+    const body = toast.add({ title: 'Toast', onClick })
+
+    await vi.waitFor(() => expect(wrapper.find('[data-slot="base"]').exists()).toBe(true), { timeout: 4000 })
+    await wrapper.find('[data-slot="base"]').trigger('click')
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ id: body.id, title: 'Toast' }))
+
+    toast.clear()
+  })
+
+  it('marks stacked toasts as collapsed', async () => {
+    const toast = useToast()
+    toast.clear()
+
+    const wrapper = await mountSuspended(Toaster, { props: { portal: false, expand: false, duration } })
+    toast.add({ title: 'Back' })
+    toast.add({ title: 'Front' })
+
+    await vi.waitFor(() => expect(wrapper.findAll('li[data-slot="base"]')).toHaveLength(2), { timeout: 4000 })
+    const [back, front] = wrapper.findAll('li[data-slot="base"]')
+
+    expect([back!.attributes('data-collapsed'), back!.attributes('data-front')]).toEqual(['true', 'false'])
+    expect([front!.attributes('data-collapsed'), front!.attributes('data-front')]).toEqual(['true', 'true'])
+
+    toast.clear()
+  })
+
+  it('labels the toasts with the label prop', async () => {
+    const wrapper = await mountSuspended(Toaster, { props: { portal: false, label: 'Alert' } })
+
+    expect(wrapper.findComponent(ToastProvider).props('label')).toBe('Alert')
+  })
+
+  it('does not pass attributes down to the provider', async () => {
+    const wrapper = await mountSuspended(Toaster, { props: { portal: false }, attrs: { limit: 1 } })
+
+    expect(wrapper.findComponent(ToastProvider).props('limit')).toBeUndefined()
+  })
+
+  it.each(['vertical', 'horizontal'] as const)('keeps the toast open when an action has closeOnClick false with orientation %s', async (orientation) => {
+    const wrapper = await mountSuspended(ToastWrapper, {
+      props: { title: 'Toast', orientation, actions: [{ label: 'Keep', closeOnClick: false }, { label: 'Close' }] }
+    })
+
+    const [keep, close] = wrapper.findAll('[data-slot="actions"] button')
+    expect(keep!.attributes('closeonclick')).toBeUndefined()
+
+    await keep!.trigger('click')
+    expect(wrapper.findComponent(Toast).emitted('update:open')).toBeUndefined()
+
+    await close!.trigger('click')
+    expect(wrapper.findComponent(Toast).emitted('update:open')).toEqual([[false]])
   })
 
   it('passes accessibility tests', async () => {
@@ -64,24 +127,6 @@ describe('Toast', () => {
         actions: [{ label: 'Action' }]
       }
     })
-    expect(await axe(wrapper.element, {
-      rules: {
-        // "ARIA role should be appropriate for the element (aria-allowed-role)"
-
-        // Fix any of the following:
-        //   ARIA role alert is not allowed for given element
-        'aria-allowed-role': { enabled: false },
-        // "ARIA hidden element must not be focusable or contain focusable elements (aria-hidden-focus)"
-
-        // Fix all of the following:
-        //   Focusable content should have tabindex="-1" or be removed from the DOM
-        'aria-hidden-focus': { enabled: false },
-        // "<ul> and <ol> must only directly contain <li>, <script> or <template> elements (list)"
-
-        // Fix all of the following:
-        //   List element has direct children that are not allowed: [role=alert]
-        'list': { enabled: false }
-      }
-    })).toHaveNoViolations()
+    expect(await axe(wrapper.element)).toHaveNoViolations()
   })
 })

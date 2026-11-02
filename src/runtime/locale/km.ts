@@ -1,4 +1,4 @@
-import type { Messages } from '../types'
+import type { Messages } from '../types/locale'
 import { defineLocale } from '../composables/defineLocale'
 
 export default defineLocale<Messages>({
@@ -16,23 +16,49 @@ export default defineLocale<Messages>({
     banner: {
       close: 'បិទ'
     },
+    breadcrumb: {
+      label: 'ផ្លូវរុករក'
+    },
     calendar: {
+      label: 'កាលបរិច្ឆេទព្រឹត្តិការណ៍',
+      monthPicker: 'ឧបករណ៍ជ្រើសរើសខែ',
       nextMonth: 'ខែបន្ទាប់',
       nextYear: 'ឆ្នាំបន្ទាប់',
       prevMonth: 'ខែមុន',
-      prevYear: 'ឆ្នាំមុន'
+      prevYear: 'ឆ្នាំមុន',
+      yearPicker: 'ឧបករណ៍ជ្រើសរើសឆ្នាំ'
     },
     carousel: {
       dots: 'ជ្រើសរើស​ស្លាយ​ដើម្បី​បង្ហាញ',
       goto: 'ឡើងទៅស្លាយ {slide}',
       next: 'បន្ទាប់',
-      prev: 'មុន'
+      prev: 'មុន',
+      roledescription: 'ការ៉ូសែល',
+      slide: 'ស្លាយ'
+    },
+    chatAttachment: {
+      uploading: 'កំពុងផ្ទុកឡើង',
+      error: 'ការផ្ទុកឡើងបានបរាជ័យ'
+    },
+    chatMessages: {
+      autoScroll: 'រំកិលចុះក្រោម'
     },
     chatPrompt: {
-      placeholder: 'សួរស្រឡាញ់មួយបីនេះមានប្រភេទបានទាមទារទេ…'
+      placeholder: 'សួរស្រឡាញ់មួយបីនេះមានប្រភេទបានទាមទារទេ…',
+      queue: 'សារក្នុងជួរ',
+      sendNow: 'ផ្ញើឥឡូវនេះ',
+      edit: 'កែសម្រួល',
+      remove: 'ដកចេញ'
     },
     chatPromptSubmit: {
-      label: 'សាក់'
+      label: 'សាក់',
+      reload: 'ព្យាយាមម្តងទៀត',
+      stop: 'បញ្ឈប់ការបង្កើត'
+    },
+    chatReasoning: {
+      thinking: 'កំពុងគិត…',
+      thought: 'គិតរួចហើយ',
+      thoughtFor: 'គិតរយៈពេល {duration}'
     },
     colorMode: {
       dark: 'ងងឹត',
@@ -46,10 +72,12 @@ export default defineLocale<Messages>({
       close: 'បិទ',
       noData: 'មិនមានទិន្នន័យ',
       noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ',
-      placeholder: 'វាយពាក្យបញ្ជា ឬស្វែងរក…'
+      placeholder: 'វាយពាក្យបញ្ជា ឬស្វែងរក…',
+      results: 'លទ្ធផល'
     },
     contentSearch: {
       links: 'តំណភ្ជាប់',
+      search: 'លទ្ធផល',
       theme: 'រូបរាង'
     },
     contentSearchButton: {
@@ -57,6 +85,10 @@ export default defineLocale<Messages>({
     },
     contentToc: {
       title: 'នៅលើទំព័រនេះ'
+    },
+    dropdownMenu: {
+      noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ',
+      search: 'ស្វែងរក…'
     },
     dashboardSearch: {
       theme: 'រូបរាង'
@@ -72,6 +104,9 @@ export default defineLocale<Messages>({
       close: 'បិទបារចំហៀង',
       open: 'បើកបារចំហៀង'
     },
+    drawer: {
+      close: 'បិទ'
+    },
     error: {
       clear: 'ត្រឡប់ទៅទំព័រដើម'
     },
@@ -82,17 +117,55 @@ export default defineLocale<Messages>({
       close: 'បិទម៉ឺនុយ',
       open: 'បើកម៉ឺនុយ'
     },
+    inputDate: {
+      day: 'ថ្ងៃ',
+      dayPeriod: 'AM/PM',
+      era: 'សករាជ',
+      hour: 'ម៉ោង',
+      minute: 'នាទី',
+      month: 'ខែ',
+      second: 'វិនាទី',
+      timeZoneName: 'ល្វែងម៉ោង',
+      year: 'ឆ្នាំ'
+    },
     inputMenu: {
       create: 'បង្កើត "{label}"',
       noData: 'មិនមានទិន្នន័យ',
-      noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ'
+      noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ',
+      trigger: 'បង្ហាញជម្រើស'
     },
     inputNumber: {
       decrement: 'បន្ថយ',
-      increment: 'បង្កើន'
+      increment: 'បង្កើន',
+      roledescription: 'វាលលេខ'
+    },
+    inputRating: {
+      rate: 'វាយតម្លៃ {value} ក្នុងចំណោម {length}'
+    },
+    inputTime: {
+      dayPeriod: 'AM/PM',
+      hour: 'ម៉ោង',
+      minute: 'នាទី',
+      second: 'វិនាទី',
+      timeZoneName: 'ល្វែងម៉ោង'
+    },
+    listbox: {
+      noData: 'មិនមានទិន្នន័យ',
+      noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ',
+      search: 'ស្វែងរក…'
     },
     modal: {
       close: 'បិទ'
+    },
+    pagination: {
+      first: 'ទំព័រដំបូង',
+      last: 'ទំព័រចុងក្រោយ',
+      next: 'ទំព័របន្ទាប់',
+      page: 'ទំព័រ {page}',
+      prev: 'ទំព័រមុន'
+    },
+    pinInput: {
+      input: 'លេខកូដ PIN តួអក្សរទី {index} នៃ {length}'
     },
     pricingTable: {
       caption: 'បញ្ជីតម្លៃបន្ទប់បន្ទប់'
@@ -110,7 +183,15 @@ export default defineLocale<Messages>({
       },
       pre: {
         copy: 'ចម្លងកូដទៅក្ដារតម្បៀតខ្ទាស់'
+      },
+      prompt: {
+        copy: 'ចម្លងការបញ្ជា',
+        openIn: 'បើកក្នុង {name}'
       }
+    },
+    sidebar: {
+      close: 'បិទ',
+      toggle: 'បិទ/បើក'
     },
     selectMenu: {
       create: 'បង្កើត "{label}"',
@@ -118,14 +199,30 @@ export default defineLocale<Messages>({
       noMatch: 'មិនមានទិន្នន័យដែលត្រូវគ្នាទេ',
       search: 'ស្វែងរក…'
     },
+    skeleton: {
+      label: 'កំពុងផ្ទុក'
+    },
     slideover: {
       close: 'បិទ'
+    },
+    slider: {
+      max: 'អតិបរមា',
+      min: 'អប្បបរមា',
+      thumb: 'ចំណុចរំកិល',
+      value: 'តម្លៃទី {index} នៃ {total}'
+    },
+    stepper: {
+      label: 'វឌ្ឍនភាព'
     },
     table: {
       noData: 'មិនមានទិន្នន័យ'
     },
     toast: {
       close: 'បិទ'
+    },
+    toaster: {
+      label: 'ការជូនដំណឹង',
+      viewport: 'ការជូនដំណឹង ({hotkey})'
     }
   }
 })

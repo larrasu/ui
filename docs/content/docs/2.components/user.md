@@ -1,7 +1,10 @@
 ---
-title: User
 description: 'Display user information with name, description and avatar.'
 category: data
+keywords:
+  - profile
+  - person
+  - account
 links:
   - label: GitHub
     icon: i-simple-icons-github
@@ -48,6 +51,7 @@ props:
   description: 'Software Engineer'
   avatar:
     src: 'https://i.pravatar.cc/150?u=john-doe'
+    loading: lazy
     icon: i-lucide-image
 ---
 ::

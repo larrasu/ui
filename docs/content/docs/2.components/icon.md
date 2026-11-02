@@ -1,16 +1,23 @@
 ---
 description: A component to display any icon from Iconify or another component.
 category: element
+keywords:
+  - svg
+  - iconify
+  - symbol
 links:
-  - label: Icônes
-    to: https://icones.js.org/
+  - label: Iconify
+    to: https://iconify.design/
     target: _blank
-    icon: i-custom-icones-js
+    icon: i-simple-icons-iconify
+  - label: GitHub
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/ui/blob/v4/src/runtime/components/Icon.vue
 ---
 
 ## Usage
 
-Use the `name` prop to display an icon:
+Use the `name` prop to display an icon.
 
 ::component-code
 ---
@@ -18,6 +25,10 @@ props:
   name: 'i-lucide-lightbulb'
   class: 'size-5'
 ---
+::
+
+::note
+You can use any name from the <https://iconify.design> collection. Browse them easily on <https://icones.js.org> or search directly from your AI assistant using the [`search-icons`](/docs/getting-started/ai/mcp#available-tools) MCP tool.
 ::
 
 ::framework-only

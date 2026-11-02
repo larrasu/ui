@@ -1,28 +1,12 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "github>nuxt/renovate-config-nuxt"
   ],
-  "lockFileMaintenance": {
-    "enabled": true
-  },
   "baseBranchPatterns": [
-    "v2",
-    "v3",
     "v4"
   ],
-  "ignoreDeps": [
-    "typescript",
-    "actions/stale"
-  ],
   "packageRules": [
-    {
-      "groupName": "tailwindcss",
-      "matchPackageNames": [
-        "tailwindcss",
-        "@tailwindcss/postcss",
-        "@tailwindcss/vite"
-      ]
-    },
     {
       "groupName": "reka-ui",
       "matchPackageNames": [
@@ -37,35 +21,16 @@
       ]
     },
     {
-      "groupName": "vite",
       "matchPackageNames": [
-        "@vitejs/plugin-vue",
-        "vite",
-        "vue",
-        "vue-router"
-      ]
-    },
-    {
-      "groupName": "vue-tsc",
-      "matchPackageNames": [
-        "vue-tsc",
-        "vue-component-type-helpers"
-      ]
+        "tailwind-variants"
+      ],
+      "allowedVersions": "<3.3.0"
     },
     {
       "matchDepTypes": [
         "peerDependencies"
       ],
       "enabled": false
-    },
-    {
-      "matchDepTypes": [
-        "resolutions"
-      ],
-      "enabled": false
     }
-  ],
-  "postUpdateOptions": [
-    "pnpmDedupe"
   ]
 }

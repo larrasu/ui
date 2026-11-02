@@ -1,12 +1,13 @@
 <script lang="ts">
 import type { ToastProviderProps } from 'reka-ui'
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/toaster'
 import type { ComponentConfig } from '../types/tv'
 
 type Toaster = ComponentConfig<typeof theme, AppConfig, 'toaster'>
 
-export interface ToasterProps extends Omit<ToastProviderProps, 'swipeDirection'> {
+export interface ToasterProps extends Omit<ToastProviderProps, 'swipeDirection' | 'limit' | 'toastManager'> {
   /**
    * The position on the screen to display the toasts.
    * @defaultValue 'bottom-right'
@@ -37,7 +38,7 @@ export interface ToasterProps extends Omit<ToastProviderProps, 'swipeDirection'>
 }
 
 export interface ToasterSlots {
-  default(props?: {}): any
+  default?(props?: {}): VNode[]
 }
 
 export default {
@@ -46,17 +47,20 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { ref, computed, toRef, provide } from 'vue'
-import { ToastProvider, ToastViewport, ToastPortal, useForwardProps } from 'reka-ui'
+import { ref, computed, defineAsyncComponent, toRef, provide, onMounted, onBeforeUnmount } from 'vue'
+import { ToastProvider, ToastViewport, ToastPortal } from 'reka-ui'
 import { reactivePick } from '@vueuse/core'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
+import { useForwardProps } from '../composables/useForwardProps'
+import { useLocale } from '../composables/useLocale'
 import { useToast, toastMaxInjectionKey } from '../composables/useToast'
 import { usePortal } from '../composables/usePortal'
 import { omit } from '../utils'
+import { requestIdleCallback, cancelIdleCallback } from '../utils/prefetch'
 import { tv } from '../utils/tv'
-import UToast from './Toast.vue'
 
-const props = withDefaults(defineProps<ToasterProps>(), {
+const _props = withDefaults(defineProps<ToasterProps>(), {
   expand: true,
   portal: true,
   duration: 5000,
@@ -65,12 +69,35 @@ const props = withDefaults(defineProps<ToasterProps>(), {
 })
 defineSlots<ToasterSlots>()
 
+// `ToastProvider` is the root, attributes would fall through as its props (`limit`, `toastManager`).
+defineOptions({ inheritAttrs: false })
+
+const props = useComponentProps('toaster', _props)
+
+const loadToast = () => import('./Toast.vue')
+
+const UToast = defineAsyncComponent(loadToast)
+
+// Preload once idle: a toast is often shown when the network just failed.
+let idleId: ReturnType<typeof requestIdleCallback>
+
+onMounted(() => {
+  idleId = requestIdleCallback(() => {
+    loadToast().catch(() => {})
+  })
+})
+
+onBeforeUnmount(() => {
+  cancelIdleCallback(idleId)
+})
+
 const { toasts, remove } = useToast()
+const { t } = useLocale()
 const appConfig = useAppConfig() as Toaster['AppConfig']
 
 provide(toastMaxInjectionKey, toRef(() => props.max))
 
-const providerProps = useForwardProps(reactivePick(props, 'duration', 'label', 'swipeThreshold', 'disableSwipe'))
+const providerProps = useForwardProps(reactivePick(props, 'duration', 'swipeThreshold', 'disableSwipe'))
 const portalProps = usePortal(toRef(() => props.portal))
 
 const swipeDirection = computed(() => {
@@ -89,7 +116,8 @@ const swipeDirection = computed(() => {
   return 'right'
 })
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.toaster || {}) })({
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.toaster || {}) })({
   position: props.position,
   swipeDirection: swipeDirection.value
 }))
@@ -103,7 +131,19 @@ function onUpdateOpen(value: boolean, id: string | number) {
 }
 
 const hovered = ref(false)
-const expanded = computed(() => props.expand || hovered.value)
+const focused = ref(false)
+const expanded = computed(() => props.expand || hovered.value || focused.value)
+
+// Only keyboard focus expands, a click on a toast is already covered by the hover.
+function onFocusin(event: FocusEvent) {
+  focused.value = (event.target as HTMLElement).matches(':focus-visible')
+}
+
+function onFocusout(event: FocusEvent) {
+  if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) {
+    focused.value = false
+  }
+}
 
 const refs = ref<{ height: number }[]>([])
 
@@ -116,18 +156,19 @@ function getOffset(index: number) {
 </script>
 
 <template>
-  <ToastProvider :swipe-direction="swipeDirection" v-bind="providerProps">
+  <ToastProvider :swipe-direction="swipeDirection" :label="props.label ?? t('toaster.label')" v-bind="providerProps">
     <slot />
 
     <UToast
       v-for="(toast, index) of toasts"
       :key="toast.id"
       ref="refs"
-      :progress="progress"
-      v-bind="omit(toast, ['id', 'close'])"
+      :progress="props.progress"
+      v-bind="omit(toast, ['id', 'close', '_duplicate', '_updated', '_animatedAt', 'onClick'])"
       :close="(toast.close as boolean)"
-      :data-expanded="expanded"
+      :data-collapsed="!expanded"
       :data-front="!expanded && index === toasts.length - 1"
+      :data-pulsing="toast._duplicate ? (toast._duplicate % 2 === 0 ? 'even' : 'odd') : undefined"
       :style="{
         '--index': (index - toasts.length) + toasts.length,
         '--before': toasts.length - 1 - index,
@@ -144,18 +185,21 @@ function getOffset(index: number) {
 
     <ToastPortal v-bind="portalProps">
       <ToastViewport
+        :label="t('toaster.viewport')"
         :data-expanded="expanded"
         data-slot="viewport"
         :class="ui.viewport({ class: [props.ui?.viewport, props.class] })"
         :style="{
           '--scale-factor': '0.05',
-          '--translate-factor': position?.startsWith('top') ? '1px' : '-1px',
-          '--gap': position?.startsWith('top') ? '16px' : '-16px',
+          '--translate-factor': props.position?.startsWith('top') ? '1px' : '-1px',
+          '--gap': props.position?.startsWith('top') ? '16px' : '-16px',
           '--front-height': `${frontHeight}px`,
           '--height': `${height}px`
         }"
         @mouseenter="hovered = true"
         @mouseleave="hovered = false"
+        @focusin="onFocusin"
+        @focusout="onFocusout"
       />
     </ToastPortal>
   </ToastProvider>

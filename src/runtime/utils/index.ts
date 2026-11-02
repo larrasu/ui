@@ -1,4 +1,6 @@
+import { defu } from 'defu'
 import { isEqual } from 'ohash/utils'
+import { withTrailingSlash, withLeadingSlash, joinURL } from 'ufo'
 import type { GetItemKeys } from '../types/utils'
 
 export function pick<Data extends object, Keys extends keyof Data>(data: Data, keys: Keys[]): Pick<Data, Keys> {
@@ -23,16 +25,11 @@ export function omit<Data extends object, Keys extends keyof Data>(data: Data, k
 }
 
 export function get(object: Record<string, any> | undefined, path: (string | number)[] | string, defaultValue?: any): any {
-  if (typeof path === 'string') {
-    path = path.split('.').map((key) => {
-      const numKey = Number(key)
-      return Number.isNaN(numKey) ? key : numKey
-    })
-  }
+  const keys = typeof path === 'string' ? path.split('.') : path
 
   let result: any = object
 
-  for (const key of path) {
+  for (const key of keys) {
     if (result === undefined || result === null) {
       return defaultValue
     }
@@ -44,18 +41,33 @@ export function get(object: Record<string, any> | undefined, path: (string | num
 }
 
 export function set(object: Record<string, any>, path: (string | number)[] | string, value: any): void {
-  if (typeof path === 'string') {
-    path = path.split('.').map((key) => {
-      const numKey = Number(key)
-      return Number.isNaN(numKey) ? key : numKey
-    })
+  const keys: string[] = []
+
+  for (const segment of typeof path === 'string' ? path.split('.') : path) {
+    const key = String(segment)
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      return
+    }
+
+    keys.push(key)
   }
 
-  path.reduce((acc, key, i) => {
-    if (acc[key] === undefined) acc[key] = {}
-    if (i === path.length - 1) acc[key] = value
-    return acc[key]
-  }, object)
+  let current = object
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]!
+
+    if (i === keys.length - 1) {
+      current[key] = value
+      return
+    }
+
+    if (current[key] === null || (typeof current[key] !== 'object' && typeof current[key] !== 'function')) {
+      current[key] = /^(?:0|[1-9]\d*)$/.test(keys[i + 1]!) ? [] : {}
+    }
+
+    current = current[key]
+  }
 }
 
 export function looseToNumber(val: any): any {
@@ -159,7 +171,13 @@ export function getDisplayValue<T extends Array<any>, V>(
   return String(source)
 }
 
-export function isArrayOfArray<A>(item: A[] | A[][]): item is A[][] {
+export function isArrayOfArray<
+  A extends any[] | any[][]
+>(item: A): item is A extends Array<infer T>
+  ? T extends any[]
+    ? T[]
+    : never
+  : never {
   return Array.isArray(item[0])
 }
 
@@ -186,7 +204,37 @@ export function transformUI(ui: any, uiProp?: any) {
   return Object.entries(ui).reduce((acc, [key, value]) => {
     acc[key] = typeof value === 'function' ? value({ class: uiProp?.[key] }) : value
     return acc
-  }, uiProp || {})
+  }, { ...(uiProp || {}) })
+}
+
+export function resolveBaseURL(path?: string, baseURL?: string): string | undefined {
+  if (path?.startsWith('/') && !path.startsWith('//')) {
+    const _base = withLeadingSlash(withTrailingSlash(baseURL || '/'))
+    if (_base !== '/' && !path.startsWith(_base)) {
+      return joinURL(_base, path)
+    }
+  }
+  return path
+}
+
+/**
+ * Resolves an `as` prop that accepts either a single element / component (applied to `root`)
+ * or an object targeting multiple elements, e.g. `{ root: 'div', title: 'h3' }`.
+ */
+export function resolveAs<T extends { root: any }>(as: any, defaults: T): T {
+  if (
+    typeof as === 'string'
+    || typeof as === 'function'
+    || typeof as?.render === 'function'
+    || typeof as?.setup === 'function'
+    // Components inheriting their `render` or `setup`
+    || !!as?.extends
+    || !!as?.mixins
+  ) {
+    return { ...defaults, root: as }
+  }
+
+  return defu(as, defaults) as T
 }
 
 export * from './content'

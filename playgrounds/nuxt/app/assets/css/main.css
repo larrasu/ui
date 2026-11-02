@@ -1,5 +1,11 @@
-@import "tailwindcss" theme(static) source("../../../..");
+@import "tailwindcss" theme(static) source(none);
 @import "@nuxt/ui";
+
+/* Scoped to this playground and the library source, which `--uiDev` resolves
+   components and theme from. A repo-root source also put `docs` and `test` on
+   the CSS watcher. */
+@source "../../..";
+@source "../../../../../src";
 
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
@@ -15,4 +21,12 @@
   --color-green-800: #016538;
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
+}
+
+html.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
 }

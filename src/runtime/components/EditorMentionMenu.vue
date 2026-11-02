@@ -2,7 +2,8 @@
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/editor-mention-menu'
 import type { EditorMenuOptions } from '../composables/useEditorMenu'
-import type { AvatarProps, IconProps } from '../types'
+import type { AvatarProps } from './Avatar.vue'
+import type { IconProps } from './Icon.vue'
 import type { ComponentConfig } from '../types/tv'
 
 type EditorMentionMenu = ComponentConfig<typeof theme, AppConfig, 'editorMentionMenu'>
@@ -20,7 +21,7 @@ export interface EditorMentionMenuItem {
   [key: string]: any
 }
 
-export interface EditorMentionMenuProps<T extends EditorMentionMenuItem = EditorMentionMenuItem> extends Partial<Pick<EditorMenuOptions<T>, 'editor' | 'char' | 'pluginKey' | 'filterFields' | 'limit' | 'options' | 'appendTo' | 'ignoreFilter'>> {
+export interface EditorMentionMenuProps<T extends EditorMentionMenuItem = EditorMentionMenuItem> extends Partial<Pick<EditorMenuOptions<T>, 'editor' | 'char' | 'pluginKey' | 'filterFields' | 'limit' | 'options' | 'suggestion' | 'appendTo' | 'ignoreFilter'>> {
   /**
    * @defaultValue 'md'
    */
@@ -50,7 +51,7 @@ const searchTerm = defineModel<string>('searchTerm', { default: '' })
 
 const appConfig = useAppConfig() as EditorMentionMenu['AppConfig']
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.editorMentionMenu || {}) })({
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.editorMentionMenu || {}) })({
   size: props.size
 }))
 
@@ -72,6 +73,7 @@ onMounted(async () => {
     ignoreFilter: props.ignoreFilter,
     limit: props.limit,
     options: props.options,
+    suggestion: props.suggestion,
     appendTo: props.appendTo,
     searchTerm,
     ui,
@@ -83,7 +85,10 @@ onMounted(async () => {
         .deleteRange(range)
         .insertContent({
           type: 'mention',
-          attrs: item
+          attrs: {
+            ...item,
+            mentionSuggestionChar: props.char
+          }
         })
         .run()
     },

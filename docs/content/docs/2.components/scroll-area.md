@@ -2,15 +2,19 @@
 title: ScrollArea
 description: A flexible scroll container with virtualization support.
 category: data
+keywords:
+  - scrollbar
+  - overflow
+  - scrolling
 links:
   - label: TanStack Virtual
     avatar:
       src: https://github.com/tanstack.png
-    to: https://tanstack.com/virtual/latest
+      loading: lazy
+    to: https://tanstack.com/virtual/v3
   - label: GitHub
     icon: i-simple-icons-github
     to: https://github.com/nuxt/ui/blob/v4/src/runtime/components/ScrollArea.vue
-navigation.badge: New
 ---
 
 ## Usage
@@ -71,6 +75,10 @@ Use the `virtualize` prop to render only the items currently in view, significan
 When virtualization is **enabled**, customize spacing via the `virtualize` prop options like `gap`, `paddingStart`, and `paddingEnd`. Otherwise, use the `ui` prop to apply classes like `gap p-4` on the `viewport` slot.
 ::
 
+::tip
+If all your items have the **same height**, set `skipMeasurement` to `true` in the `virtualize` prop to skip per-item DOM measurement and rely on `estimateSize` instead. This significantly improves performance for large uniform lists.
+::
+
 ::component-example
 ---
 collapse: true
@@ -85,6 +93,21 @@ options:
       - vertical
       - horizontal
 ---
+::
+
+### Shadow :badge{label="4.9+" class="align-text-top"}
+
+Use the `shadow` prop to display fade shadows on the scrollable edges, indicating that more content is available in the scroll direction. The fade automatically follows the `orientation` and only appears when the content overflows.
+
+::component-example
+---
+collapse: true
+name: 'scroll-area-shadow-example'
+---
+::
+
+::tip
+Pass an object to the `shadow` prop to configure the fade size, e.g. `:shadow="{ size: 48 }"`.
 ::
 
 ## Examples
@@ -134,6 +157,35 @@ class: '!p-0'
 ---
 ::
 
+### With external scroll element :badge{label="4.10+" class="align-text-top"}
+
+Pass a `getScrollElement` function in the `virtualize` prop to virtualize against an ancestor scroll container instead of the component's own viewport. Set `scrollMargin` to the list's offset from the scroll element's start (e.g. the height of the content above it).
+
+::component-example
+---
+prettier: true
+collapse: true
+overflowHidden: true
+name: 'scroll-area-external-scroll-example'
+class: '!p-0'
+options:
+  - name: orientation
+    label: orientation
+    default: vertical
+    items:
+      - vertical
+      - horizontal
+---
+::
+
+::note
+Because the container owns the scroll, the toolbar's find and "Top" buttons scroll it directly with `container.scrollTo`.
+::
+
+::caution
+The `shadow` prop has no effect in this mode, since the root no longer owns the scroll. Apply your own fade to the scroll container instead.
+::
+
 ### With programmatic scroll
 
 You can use the exposed `virtualizer` to programmatically control scroll position.
@@ -159,6 +211,10 @@ overflowHidden: true
 name: 'scroll-area-infinite-scroll-example'
 class: '!p-0'
 ---
+::
+
+::note
+This example uses `useLazyFetch` with `server: false` to fetch data on the client without blocking the initial render. The loading state checks for both `pending` and `idle` status to display a loading indicator before and during the fetch. Additional pages are loaded as the user scrolls.
 ::
 
 ### With default slot
@@ -210,7 +266,7 @@ This will give you access to the following:
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | `$el`{lang="ts-type"} | `HTMLElement`{lang="ts-type"} | The root element of the component. |
-| `virtualizer`{lang="ts-type"} | `Ref<Virtualizer> \| undefined`{lang="ts-type"} | The [TanStack Virtual](https://tanstack.com/virtual/latest/docs/api/virtualizer) virtualizer instance (`undefined` if virtualization is disabled). |
+| `virtualizer`{lang="ts-type"} | `Ref<Virtualizer> \| undefined`{lang="ts-type"} | The [TanStack Virtual](https://tanstack.com/virtual/v3/docs/api/virtualizer) virtualizer instance (`undefined` if virtualization is disabled). |
 
 ## Theme
 

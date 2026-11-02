@@ -1,9 +1,8 @@
 import { describe, it, expect, test } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import RadioGroup from '../../src/runtime/components/RadioGroup.vue'
-import type { RadioGroupProps, RadioGroupSlots } from '../../src/runtime/components/RadioGroup.vue'
-import ComponentRender from '../component-render'
 import theme from '#build/ui/radio-group'
 import { flushPromises, mount } from '@vue/test-utils'
 import { renderForm } from '../utils/form'
@@ -22,7 +21,7 @@ describe('RadioGroup', () => {
 
   const props = { items }
 
-  it.each([
+  renderEach(RadioGroup, [
     ['with items', { props }],
     ['with modelValue', { props: { ...props, modelValue: '1' } }],
     ['with defaultValue', { props: { ...props, defaultValue: '1' } }],
@@ -31,10 +30,16 @@ describe('RadioGroup', () => {
     ['with descriptionKey', { props: { ...props, descriptionKey: 'value' } }],
     ['with disabled', { props: { ...props, disabled: true } }],
     ['with description', { props: { items: items.map((opt, count) => ({ ...opt, description: `Description ${count}` })) } }],
+    ['with icon', { props: { items: items.map(opt => ({ ...opt, icon: 'i-lucide-rocket' })), indicator: 'hidden' } }],
+    ['with icon card', { props: { items: items.map(opt => ({ ...opt, icon: 'i-lucide-rocket' })), indicator: 'hidden', variant: 'card', defaultValue: '1' } }],
+    ['with icon table', { props: { items: items.map(opt => ({ ...opt, icon: 'i-lucide-rocket' })), indicator: 'hidden', variant: 'table', defaultValue: '1' } }],
+    ['with highlight indicator hidden', { props: { ...props, indicator: 'hidden', variant: 'card', highlight: true, defaultValue: '1' } }],
     ['with required', { props: { ...props, legend: 'Legend', required: true } }],
     ...sizes.map((size: string) => [`with size ${size}`, { props: { ...props, size, defaultValue: '1' } }]),
     ...variants.map((variant: string) => [`with primary variant ${variant}`, { props: { ...props, variant, defaultValue: '1' } }]),
+    ...variants.map((variant: string) => [`with primary variant ${variant} highlight`, { props: { ...props, variant, highlight: true, defaultValue: '1' } }]),
     ...variants.map((variant: string) => [`with neutral variant ${variant}`, { props: { ...props, variant, color: 'neutral', defaultValue: '1' } }]),
+    ...variants.map((variant: string) => [`with neutral variant ${variant} highlight`, { props: { ...props, variant, color: 'neutral', highlight: true, defaultValue: '1' } }]),
     ...variants.map((variant: string) => [`with horizontal variant ${variant}`, { props: { ...props, variant, orientation: 'horizontal', defaultValue: '1' } }]),
     ...indicators.map((indicator: string) => [`with indicator ${indicator}`, { props: { ...props, indicator, defaultValue: '1' } }]),
     ['with ariaLabel', { props, attrs: { 'aria-label': 'Aria label' } }],
@@ -45,14 +50,41 @@ describe('RadioGroup', () => {
     ['with legend slot', { props, slots: { label: () => 'Legend slot' } }],
     ['with label slot', { props, slots: { label: () => 'Label slot' } }],
     ['with description slot', { props, slots: { label: () => 'Description slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: RadioGroupProps, slots?: Partial<RadioGroupSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, RadioGroup)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(RadioGroup, {
       props
+    })
+    expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+
+  it('renders an item icon next to the label only when the indicator is hidden', async () => {
+    const items = [{ value: '1', label: 'Option 1', icon: 'i-lucide-rocket' }]
+
+    const wrapper = await mountSuspended(RadioGroup, { props: { items } })
+    expect(wrapper.find('[data-slot="wrapper"] [data-slot="icon"]').exists()).toBe(false)
+
+    const hidden = await mountSuspended(RadioGroup, { props: { items, indicator: 'hidden' } })
+    expect(hidden.find('[data-slot="wrapper"] [data-slot="icon"]').exists()).toBe(true)
+  })
+
+  it('renders an item icon without a label', async () => {
+    const wrapper = await mountSuspended(RadioGroup, {
+      props: { items: [{ value: 'table', icon: 'i-lucide-table' }], indicator: 'hidden' }
+    })
+    expect(wrapper.find('[data-slot="wrapper"] [data-slot="icon"]').exists()).toBe(true)
+  })
+
+  it('passes accessibility tests with icon items', async () => {
+    const wrapper = await mountSuspended(RadioGroup, {
+      props: {
+        items: [{ value: 'system', label: 'System', icon: 'i-lucide-monitor' }, { value: 'light', label: 'Light', icon: 'i-lucide-sun' }],
+        variant: 'table',
+        indicator: 'hidden',
+        orientation: 'horizontal',
+        defaultValue: 'system'
+      }
     })
     expect(await axe(wrapper.element)).toHaveNoViolations()
   })
@@ -132,6 +164,39 @@ describe('RadioGroup', () => {
       const { wrapper } = await createForm()
       const formFieldLabel = wrapper.findAll('label').map(label => label.attributes()).filter(label => !label.for?.includes('Option'))[0]
       expect(formFieldLabel?.for).toBeUndefined()
+    })
+  })
+
+  // https://github.com/nuxt/ui/issues/6033
+  describe('label element', () => {
+    test('is a <label> in the default (list) variant', async () => {
+      const wrapper = await mountSuspended(RadioGroup, { props: { items, modelValue: '1' } })
+      const label = wrapper.find('[data-slot="label"]')
+
+      expect(label.exists()).toBe(true)
+      expect(label.element.tagName).toBe('LABEL')
+      expect(label.attributes('for')).toBeTruthy()
+    })
+
+    test.each(['card', 'table'] as const)('is a <div> in the %s variant', async (variant) => {
+      const wrapper = await mountSuspended(RadioGroup, { props: { items, modelValue: '1', variant } })
+      const label = wrapper.find('[data-slot="label"]')
+
+      expect(label.exists()).toBe(true)
+      expect(label.element.tagName).toBe('DIV')
+      expect(label.attributes('for')).toBeUndefined()
+    })
+
+    test('is a <div> in the card variant with custom content', async () => {
+      const wrapper = await mountSuspended(RadioGroup, {
+        props: { items, modelValue: '1', variant: 'card' },
+        slots: { label: '<span data-testid="custom-label">Custom</span>' }
+      })
+      const label = wrapper.find('[data-slot="label"]')
+
+      expect(label.element.tagName).toBe('DIV')
+      expect(label.attributes('for')).toBeUndefined()
+      expect(wrapper.find('[data-testid="custom-label"]').exists()).toBe(true)
     })
   })
 })

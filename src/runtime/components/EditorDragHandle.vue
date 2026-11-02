@@ -1,10 +1,13 @@
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import type { Placement, Strategy } from '@floating-ui/dom'
 import type { Editor, JSONContent } from '@tiptap/vue-3'
 import type { DragHandleProps } from '@tiptap/extension-drag-handle-vue-3'
 import theme from '#build/ui/editor-drag-handle'
-import type { ButtonProps, IconProps, LinkPropsKeys } from '../types'
+import type { ButtonProps } from './Button.vue'
+import type { IconProps } from './Icon.vue'
+import type { LinkPropsKeys } from './Link.vue'
 import type { FloatingUIOptions } from '../types/editor'
 import type { ComponentConfig } from '../types/tv'
 
@@ -35,7 +38,7 @@ export interface EditorDragHandleProps extends Omit<DragHandleProps, 'editor' | 
 }
 
 export interface EditorDragHandleSlots {
-  default(props: { ui: EditorDragHandle['ui'], onClick: () => { node: JSONContent, pos: number } | undefined }): any
+  default?(props: { ui: EditorDragHandle['ui'], onClick: () => { node: JSONContent, pos: number } | undefined }): VNode[]
 }
 
 export interface EditorDragHandleEmits {
@@ -47,10 +50,11 @@ export interface EditorDragHandleEmits {
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import DragHandle from '@tiptap/extension-drag-handle-vue-3'
-import { useForwardProps } from 'reka-ui'
 import { reactiveOmit, reactivePick } from '@vueuse/core'
 import { defu } from 'defu'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
+import { useForwardProps } from '../composables/useForwardProps'
 import { buildFloatingUIMiddleware } from '../utils/editor'
 import { transformUI } from '../utils'
 import { tv } from '../utils/tv'
@@ -58,7 +62,7 @@ import UButton from './Button.vue'
 
 defineOptions({ inheritAttrs: false })
 
-const props = withDefaults(defineProps<EditorDragHandleProps>(), {
+const _props = withDefaults(defineProps<EditorDragHandleProps>(), {
   color: 'neutral',
   variant: 'ghost',
   size: 'sm'
@@ -66,13 +70,15 @@ const props = withDefaults(defineProps<EditorDragHandleProps>(), {
 defineSlots<EditorDragHandleSlots>()
 const emit = defineEmits<EditorDragHandleEmits>()
 
+const props = useComponentProps('editorDragHandle', _props)
+
 const dragHandleProps = useForwardProps(reactivePick(props, 'pluginKey', 'nested', 'nestedOptions', 'onElementDragEnd', 'onElementDragStart', 'getReferencedVirtualElement'))
 const buttonProps = useForwardProps(reactiveOmit(props, 'icon', 'options', 'editor', 'pluginKey', 'nested', 'nestedOptions', 'onElementDragEnd', 'onElementDragStart', 'getReferencedVirtualElement', 'class', 'ui'))
 
 const appConfig = useAppConfig() as EditorDragHandle['AppConfig']
 
 // eslint-disable-next-line vue/no-dupe-keys
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.editorDragHandle || {}) })())
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.editorDragHandle || {}) })())
 
 const floatingUIOptions = computed(() => defu(props.options, {
   strategy: 'absolute' as Strategy,
@@ -146,9 +152,9 @@ function onClick() {
   <DragHandle
     v-bind="dragHandleProps"
     :compute-position-config="computePositionConfig"
-    :editor="editor"
+    :editor="props.editor"
     :on-node-change="onNodeChange"
-    data-slot="root"
+    :data-slot="($attrs['data-slot'] as string | undefined) ?? 'root'"
     :class="ui.root({ class: [props.ui?.root, props.class] })"
     @click="onClick"
   >

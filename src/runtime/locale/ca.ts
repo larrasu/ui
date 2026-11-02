@@ -1,4 +1,4 @@
-import type { Messages } from '../types'
+import type { Messages } from '../types/locale'
 import { defineLocale } from '../composables/defineLocale'
 
 export default defineLocale<Messages>({
@@ -16,23 +16,49 @@ export default defineLocale<Messages>({
     banner: {
       close: 'Tancar'
     },
+    breadcrumb: {
+      label: 'ruta de navegació'
+    },
     calendar: {
+      label: 'Data de l\'esdeveniment',
+      monthPicker: 'Selector de mes',
       nextMonth: 'Mes següent',
       nextYear: 'Any següent',
       prevMonth: 'Mes anterior',
-      prevYear: 'Any anterior'
+      prevYear: 'Any anterior',
+      yearPicker: 'Selector d\'any'
     },
     carousel: {
       dots: 'Tria la diapositiva a mostrar',
       goto: 'Anar a la diapositiva {slide}',
       next: 'Següent',
-      prev: 'Anterior'
+      prev: 'Anterior',
+      roledescription: 'carrusel',
+      slide: 'diapositiva'
+    },
+    chatAttachment: {
+      uploading: 'S\'està pujant',
+      error: 'No s\'ha pogut pujar'
+    },
+    chatMessages: {
+      autoScroll: 'Desplaçar cap avall'
     },
     chatPrompt: {
-      placeholder: 'Escriu el teu missatge aquí…'
+      placeholder: 'Escriu el teu missatge aquí…',
+      queue: 'Missatges a la cua',
+      sendNow: 'Envia ara',
+      edit: 'Edita',
+      remove: 'Elimina'
     },
     chatPromptSubmit: {
-      label: 'Enviar'
+      label: 'Enviar',
+      reload: 'Tornar a provar',
+      stop: 'Aturar la generació'
+    },
+    chatReasoning: {
+      thinking: 'Pensant…',
+      thought: 'Ha pensat',
+      thoughtFor: 'Ha pensat durant {duration}'
     },
     colorMode: {
       dark: 'Fosc',
@@ -46,10 +72,12 @@ export default defineLocale<Messages>({
       close: 'Tancar',
       noData: 'Sense dades',
       noMatch: 'No hi ha dades coincidents',
-      placeholder: 'Escriu una ordre o cerca…'
+      placeholder: 'Escriu una ordre o cerca…',
+      results: 'Resultats'
     },
     contentSearch: {
       links: 'Enllaços',
+      search: 'Resultats',
       theme: 'Tema'
     },
     contentSearchButton: {
@@ -57,6 +85,10 @@ export default defineLocale<Messages>({
     },
     contentToc: {
       title: 'En aquesta pàgina'
+    },
+    dropdownMenu: {
+      noMatch: 'No hi ha dades coincidents',
+      search: 'Cerca…'
     },
     dashboardSearch: {
       theme: 'Tema'
@@ -72,6 +104,9 @@ export default defineLocale<Messages>({
       close: 'Tancar barra lateral',
       open: 'Obrir barra lateral'
     },
+    drawer: {
+      close: 'Tancar'
+    },
     error: {
       clear: 'Tornar a l\'inici'
     },
@@ -82,17 +117,55 @@ export default defineLocale<Messages>({
       close: 'Tancar menú',
       open: 'Obrir menú'
     },
+    inputDate: {
+      day: 'dia',
+      dayPeriod: 'AM/PM',
+      era: 'era',
+      hour: 'hora',
+      minute: 'minut',
+      month: 'mes',
+      second: 'segon',
+      timeZoneName: 'zona horària',
+      year: 'any'
+    },
     inputMenu: {
       create: 'Crear "{label}"',
       noData: 'Sense dades',
-      noMatch: 'No hi ha dades coincidents'
+      noMatch: 'No hi ha dades coincidents',
+      trigger: 'Mostra les opcions'
     },
     inputNumber: {
       decrement: 'Decrementar',
-      increment: 'Incrementar'
+      increment: 'Incrementar',
+      roledescription: 'camp numèric'
+    },
+    inputRating: {
+      rate: 'Valorar {value} de {length}'
+    },
+    inputTime: {
+      dayPeriod: 'AM/PM',
+      hour: 'hora',
+      minute: 'minut',
+      second: 'segon',
+      timeZoneName: 'zona horària'
+    },
+    listbox: {
+      noData: 'Sense dades',
+      noMatch: 'No hi ha dades coincidents',
+      search: 'Cerca…'
     },
     modal: {
       close: 'Tancar'
+    },
+    pagination: {
+      first: 'Primera pàgina',
+      last: 'Última pàgina',
+      next: 'Pàgina següent',
+      page: 'Pàgina {page}',
+      prev: 'Pàgina anterior'
+    },
+    pinInput: {
+      input: 'codi PIN, caràcter {index} de {length}'
     },
     pricingTable: {
       caption: 'Comparació de plans de preu'
@@ -110,7 +183,15 @@ export default defineLocale<Messages>({
       },
       pre: {
         copy: 'Copiar codi al portapapers'
+      },
+      prompt: {
+        copy: 'Copiar instrucció',
+        openIn: 'Obrir a {name}'
       }
+    },
+    sidebar: {
+      close: 'Tancar',
+      toggle: 'Canviar'
     },
     selectMenu: {
       create: 'Crear "{label}"',
@@ -118,14 +199,30 @@ export default defineLocale<Messages>({
       noMatch: 'No hi ha dades coincidents',
       search: 'Cerca…'
     },
+    skeleton: {
+      label: 'carregant'
+    },
     slideover: {
       close: 'Tancar'
+    },
+    slider: {
+      max: 'Màxim',
+      min: 'Mínim',
+      thumb: 'Cursor',
+      value: 'Valor {index} de {total}'
+    },
+    stepper: {
+      label: 'progrés'
     },
     table: {
       noData: 'Sense dades'
     },
     toast: {
       close: 'Tancar'
+    },
+    toaster: {
+      label: 'Notificació',
+      viewport: 'Notificacions ({hotkey})'
     }
   }
 })

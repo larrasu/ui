@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { joinURL } from 'ufo'
 import { kebabCase } from 'scule'
 import type { ContentNavigationItem } from '@nuxt/content'
+
+const isDev = import.meta.dev
 
 const route = useRoute()
 const { framework } = useFrameworks()
@@ -12,7 +13,14 @@ definePageMeta({
 
 const { data: page } = await useAsyncData(kebabCase(route.path), () => queryCollection('docs').path(route.path).first())
 if (!page.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
+  throw createError({ status: 404, statusText: 'Page not found', fatal: true })
+}
+
+// A page that is only a link in the sidebar, like Figma. The route rule sends
+// full requests along, this catches client side navigations to it.
+const externalTo = (page.value as { to?: string }).to
+if (externalTo) {
+  await navigateTo(externalTo, { external: true, replace: true })
 }
 
 // Update the framework if the page has different one
@@ -27,7 +35,20 @@ const navigation = inject<Ref<ContentNavigationItem[]>>('navigation')
 const { findSurround, findBreadcrumb } = useNavigation(navigation!)
 
 const breadcrumb = computed(() => findBreadcrumb(page.value?.path as string))
-const surround = computed(() => findSurround(page.value?.path as string))
+
+// The surround links are framework-specific. Prerendered pages bake in the page's
+// framework (or the `nuxt` default), but `useFrameworks` reads the real cookie on the
+// client, so keep using the prerendered value through hydration to avoid a mismatch,
+// then switch to the actual framework once mounted.
+const hydrated = ref(false)
+onMounted(() => {
+  hydrated.value = true
+})
+
+const surround = computed(() => findSurround(
+  page.value?.path as string,
+  hydrated.value ? framework.value : ((page.value?.framework as string) || 'nuxt')
+))
 
 if (!import.meta.prerender) {
   // Redirect to the correct framework version if the page is not the current framework
@@ -47,67 +68,92 @@ if (!import.meta.prerender) {
 const title = page.value?.seo?.title ? page.value.seo.title : page.value?.navigation?.title ? page.value.navigation.title : page.value?.title
 const prefix = page.value?.path.includes('components/') || page.value?.path.includes('composables/') ? 'Vue ' : ''
 const suffix = page.value?.path.includes('components/') ? 'Component ' : page.value?.path.includes('composables/') ? 'Composable ' : ''
+// A `Vue X Component` title already says Vue, so only tag the framework on pages without that prefix
+const frameworkSuffix = !prefix && page.value?.framework === 'vue' ? ' for Vue' : ''
 const description = page.value?.seo?.description ? page.value.seo.description : page.value?.description
 
 useSeoMeta({
-  titleTemplate: `${prefix}%s ${suffix}- Nuxt UI ${page.value?.framework === 'vue' ? ' for Vue' : ''}`,
+  titleTemplate: `${prefix}%s ${suffix}- Nuxt UI${frameworkSuffix}`,
   title,
-  ogTitle: `${prefix}${title} ${suffix}- Nuxt UI ${page.value?.framework === 'vue' ? ' for Vue' : ''}`,
+  ogTitle: `${prefix}${title} ${suffix}- Nuxt UI${frameworkSuffix}`,
   description,
   ogDescription: description
 })
 
-if (route.path.startsWith('/docs/components/')) {
-  defineOgImageComponent('OgImageComponent', {
-    title: page.value.title,
-    description: page.value.description,
-    component: (route.params.slug as string[]).pop() as string
-  })
-} else {
-  defineOgImageComponent('Docs', {
-    title: page.value.title,
-    description: page.value.description,
-    headline: breadcrumb.value?.[breadcrumb.value.length - 1]?.label || 'Nuxt UI',
-    framework: page.value?.framework
-  })
+const path = computed(() => route.path.replace(/\/$/, ''))
+
+useCanonical(computed(() => `/raw${path.value}.md`))
+
+if (import.meta.server) {
+  if (route.path.startsWith('/docs/components/')) {
+    defineOgImage('Component.takumi', {
+      title: page.value.title,
+      description: page.value.description,
+      slug: (route.params.slug as string[]).pop() as string
+    })
+  } else {
+    defineOgImage('Docs.takumi', {
+      title: page.value.title,
+      description: page.value.description,
+      headline: breadcrumb.value?.[breadcrumb.value.length - 1]?.label || 'Nuxt UI',
+      framework: page.value?.framework
+    })
+  }
+
+  useSchemaOrg([
+    defineArticle({
+      '@type': 'TechArticle',
+      'headline': `${prefix}${title} ${suffix}`.trim(),
+      'description': description
+    }),
+    defineBreadcrumb({
+      itemListElement: breadcrumb.value?.map(item => ({
+        name: item.label,
+        item: item.to ? String(item.to) : undefined
+      })) || []
+    })
+  ])
 }
 
-// Pre-render the markdown path + add it to alternate links
-const site = useSiteConfig()
-const path = computed(() => route.path.replace(/\/$/, ''))
-prerenderRoutes([joinURL('/raw', `${path.value}.md`)])
-useHead({
-  link: [
-    {
-      rel: 'alternate',
-      href: joinURL(site.url, 'raw', `${path.value}.md`),
-      type: 'text/markdown'
-    }
-  ]
-})
+const { open, ask } = useChat()
+const studioIcons = useStudioIcons()
 
-const communityLinks = computed(() => [{
-  icon: 'i-lucide-file-pen',
+const links = computed(() => [{
+  icon: studioIcons.pencil,
   label: 'Edit this page',
   to: `https://github.com/nuxt/ui/edit/v4/docs/content/${page?.value?.stem}.md`,
   target: '_blank'
 }, {
-  icon: 'i-lucide-star',
-  label: 'Star on GitHub',
-  to: `https://github.com/nuxt/ui`,
-  target: '_blank'
+  // Nuxi, the same mark every Ask trigger wears, so it doesn't skin with the pack
+  icon: 'i-custom-nuxi',
+  label: 'Explain this page',
+  onClick: () => ask('Read this documentation page and summarize it. I want to ask questions about it.')
 }])
 </script>
 
 <template>
-  <UPage v-if="page">
-    <UPageHeader :title="page.title">
+  <UPage
+    v-if="page"
+    :ui="open ? {
+      center: 'lg:col-span-10',
+      right: 'lg:hidden'
+    } : undefined"
+  >
+    <UPageHeader :description="page.description">
       <template #headline>
         <UBreadcrumb :items="breadcrumb" />
       </template>
 
-      <template #description>
-        <MDC v-if="page.description" :value="page.description" unwrap="p" :cache-key="`${kebabCase(route.path)}-description`" />
+      <template #title>
+        {{ page.title }}
+
+        <UBadge
+          v-if="page.navigation?.badge"
+          :label="page.navigation?.badge"
+          variant="subtle"
+          size="lg"
+          class="rounded-full align-middle"
+        />
       </template>
 
       <template #links>
@@ -136,15 +182,17 @@ const communityLinks = computed(() => [{
     </UPageBody>
 
     <template v-if="page?.body?.toc?.links?.length" #right>
-      <UContentToc :links="page.body.toc.links" class="z-[2]">
+      <UContentToc :links="page.body.toc.links" class="z-2" highlight highlight-variant="circuit">
         <template #bottom>
           <USeparator v-if="page.body?.toc?.links?.length" type="dashed" />
 
-          <UPageLinks title="Community" :links="communityLinks" />
+          <UPageLinks :links="links" />
 
-          <USeparator type="dashed" />
+          <template v-if="!isDev">
+            <USeparator type="dashed" />
 
-          <AdsCarbon />
+            <AdsCarbon />
+          </template>
         </template>
       </UContentToc>
     </template>

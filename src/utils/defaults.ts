@@ -36,12 +36,15 @@ export const defaultOptions = {
   theme: {
     colors: undefined,
     transitions: true,
+    unstyled: false,
     defaultVariants: {
       color: undefined,
       size: undefined
     },
     prefix: undefined
   },
+  prose: undefined,
   mdc: false,
-  content: false
+  content: false,
+  eslint: false
 }

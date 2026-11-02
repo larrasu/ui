@@ -25,19 +25,22 @@ authors:
     description: '@benjamincanac'
     avatar:
       src: https://github.com/benjamincanac.png
+      loading: lazy
     to: https://x.com/benjamincanac
     target: _blank
   - name: Sebastien Chopin
     description: '@atinux'
     avatar:
       src: https://github.com/atinux.png
+      loading: lazy
     to: https://x.com/atinux
     target: _blank
   - name: Hugo Richard
-    description: '@hugorcd__'
+    description: '@hugorcd'
     avatar:
       src: https://github.com/hugorcd.png
-    to: https://x.com/hugorcd__
+      loading: lazy
+    to: https://x.com/hugorcd
     target: _blank
 to: 'https://nuxt.com/blog/nuxt-ui-v3'
 target: '_blank'
@@ -67,6 +70,10 @@ props:
   class: 'w-full'
   ui.container: 'max-w-lg'
 ---
+::
+
+::tip
+The title is rendered as an `h2` by default. Use the `as` prop with an object to change it, for example `:as="{ title: 'h3' }"`{lang="ts-type"}. You can also set the root element this way: `:as="{ root: 'div', title: 'h3' }"`{lang="ts-type"}.
 ::
 
 ### Description
@@ -175,8 +182,11 @@ props:
 
 Use the `image` prop to display an image in the BlogPost.
 
-::note
-If [`@nuxt/image`](https://image.nuxt.com/get-started/installation) is installed, the `<NuxtImg>` component will be used instead of the native `img` tag.
+::framework-only
+#nuxt
+:::note
+If [`@nuxt/image`](/docs/getting-started/integrations/image) is installed, the `<NuxtImg>` component will be used instead of the native `img` tag.
+:::
 ::
 
 ::component-code
@@ -240,19 +250,22 @@ props:
       description: '@benjamincanac'
       avatar:
         src: https://github.com/benjamincanac.png
+        loading: lazy
       to: https://x.com/benjamincanac
       target: _blank
     - name: Sebastien Chopin
       description: '@atinux'
       avatar:
         src: https://github.com/atinux.png
+        loading: lazy
       to: https://x.com/atinux
       target: _blank
     - name: Hugo Richard
-      description: '@hugorcd__'
+      description: '@hugorcd'
       avatar:
         src: https://github.com/hugorcd.png
-      to: https://x.com/hugorcd__
+        loading: lazy
+      to: https://x.com/hugorcd
       target: _blank
   class: 'w-full'
   ui.container: 'max-w-lg'
@@ -325,7 +338,7 @@ When the `indicator` prop is `false`, the date will be displayed over the title.
 
 You can use the `body` slot to display custom content between the image and the authors with:
 
-- the [MDC](https://github.com/nuxt-modules/mdc?tab=readme-ov-file#mdc) component from `@nuxtjs/mdc` to display some markdown.
+- the [Markdown](https://comark.dev/rendering/vue) component from `@comark/vue` to display some markdown.
 - the [ContentRenderer](https://content.nuxt.com/docs/components/content-renderer) component from `@nuxt/content` to render the content of the page or list.
 - or use the `:u-changelog-version` component directly in your content with markdown inside the `body` slot as Nuxt UI provides pre-styled prose components.
 

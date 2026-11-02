@@ -2,6 +2,9 @@
 title: InputTags
 description: An input element that displays interactive tags.
 category: form
+keywords:
+  - chips input
+  - multi value
 links:
   - label: InputTags
     icon: i-custom-reka-ui
@@ -151,12 +154,14 @@ Use the `avatar` prop to show an [Avatar](/docs/components/avatar) inside the In
 prettier: true
 ignore:
   - modelValue
+  - avatar.loading
 external:
   - modelValue
 props:
   modelValue: ['Vue']
   avatar:
     src: 'https://github.com/vuejs.png'
+    loading: lazy
   size: md
   variant: outline
 ---

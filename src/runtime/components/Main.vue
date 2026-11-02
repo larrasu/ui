@@ -1,4 +1,5 @@
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/main'
 import type { ComponentConfig } from '../types/tv'
@@ -12,10 +13,11 @@ export interface MainProps {
    */
   as?: any
   class?: any
+  ui?: { base?: any }
 }
 
 export interface MainSlots {
-  default(props?: {}): any
+  default?(props?: {}): VNode[]
 }
 </script>
 
@@ -24,19 +26,23 @@ import { computed } from 'vue'
 import { Primitive } from 'reka-ui'
 import { useAppConfig } from '#imports'
 import { tv } from '../utils/tv'
+import { useComponentProps } from '../composables/useComponentProps'
 
-const props = withDefaults(defineProps<MainProps>(), {
+const _props = withDefaults(defineProps<MainProps>(), {
   as: 'main'
 })
 defineSlots<MainSlots>()
 
+const props = useComponentProps('main', _props)
+
 const appConfig = useAppConfig() as Main['AppConfig']
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.main || {}) }))
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.main || {}) }))
 </script>
 
 <template>
-  <Primitive :as="as" :class="ui({ class: props.class })">
+  <Primitive :as="props.as" :class="ui({ class: [props.ui?.base, props.class] })">
     <slot />
   </Primitive>
 </template>

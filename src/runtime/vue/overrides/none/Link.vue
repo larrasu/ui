@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { ButtonHTMLAttributes } from 'vue'
+import type { ButtonHTMLAttributes, VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/link'
 import type { ComponentConfig } from '../../../types/tv'
@@ -66,13 +66,14 @@ export interface LinkProps extends BaseLinkProps {
 }
 
 export interface LinkSlots {
-  default(props: { active: boolean }): any
+  default?(props: { active: boolean }): VNode[]
 }
 </script>
 
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import { defu } from 'defu'
+import { Slot } from 'reka-ui'
 import { hasProtocol } from 'ufo'
 import { useAppConfig } from '#imports'
 import { mergeClasses } from '../../../utils'
@@ -92,7 +93,7 @@ defineSlots<LinkSlots>()
 const appConfig = useAppConfig() as Link['AppConfig']
 
 const ui = computed(() => tv({
-  extend: tv(theme),
+  extend: theme,
   ...defu({
     variants: {
       active: {
@@ -121,6 +122,8 @@ const isExternal = computed(() => {
   return hasProtocol(href.value, { acceptRelative: true })
 })
 
+const hasTarget = computed(() => !!props.target && props.target !== '_self')
+
 const isLinkActive = computed(() => {
   if (props.active !== undefined) {
     return props.active
@@ -139,16 +142,19 @@ const linkClass = computed(() => {
   return ui.value({ class: props.class, active, disabled: props.disabled })
 })
 
-const linkRel = computed(() => {
+const rel = computed(() => {
+  // If noRel is explicitly set, return null
   if (props.noRel) {
     return null
   }
 
-  if (props.rel) {
-    return props.rel
+  // If rel is explicitly set, use it
+  if (props.rel !== undefined) {
+    return props.rel || null
   }
 
-  if (isExternal.value) {
+  // Default to "noopener noreferrer" for external links or links with target
+  if (isExternal.value || hasTarget.value) {
     return 'noopener noreferrer'
   }
 
@@ -169,7 +175,7 @@ const navigate = handleNavigation
 </script>
 
 <template>
-  <template v-if="custom">
+  <Slot v-if="custom">
     <slot
       v-bind="{
         ...$attrs,
@@ -178,13 +184,13 @@ const navigate = handleNavigation
         disabled,
         href,
         navigate,
-        rel: linkRel,
+        rel,
         target: target || (isExternal ? '_blank' : undefined),
         isExternal,
         active: isLinkActive
       }"
     />
-  </template>
+  </Slot>
   <ULinkBase
     v-else
     v-bind="{
@@ -194,7 +200,7 @@ const navigate = handleNavigation
       disabled,
       href,
       navigate,
-      rel: linkRel,
+      rel,
       target: target || (isExternal ? '_blank' : undefined),
       isExternal
     }"

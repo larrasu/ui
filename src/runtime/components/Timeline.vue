@@ -1,8 +1,10 @@
 <!-- eslint-disable vue/block-tag-newline -->
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/timeline'
-import type { AvatarProps, IconProps } from '../types'
+import type { AvatarProps } from './Avatar.vue'
+import type { IconProps } from './Icon.vue'
 import type { DynamicSlots, GetItemKeys } from '../types/utils'
 import type { ComponentConfig } from '../types/tv'
 
@@ -17,7 +19,7 @@ export interface TimelineItem {
   value?: string | number
   slot?: string
   class?: any
-  ui?: Pick<Timeline['slots'], 'item' | 'container' | 'indicator' | 'separator' | 'wrapper' | 'date' | 'title' | 'description'>
+  ui?: Partial<Pick<Timeline['slots'], 'item' | 'container' | 'indicator' | 'separator' | 'wrapper' | 'date' | 'title' | 'description'>>
   [key: string]: any
 }
 
@@ -52,18 +54,18 @@ export interface TimelineProps<T extends TimelineItem = TimelineItem> {
   ui?: Timeline['slots']
 }
 
-type SlotProps<T extends TimelineItem> = (props: { item: T }) => any
+type SlotProps<T extends TimelineItem> = (props: { item: T }) => VNode[]
 
 export interface TimelineEmits<T extends TimelineItem = TimelineItem> {
   select: [event: Event, item: T]
 }
 
 export type TimelineSlots<T extends TimelineItem = TimelineItem> = {
-  indicator: SlotProps<T>
-  wrapper: SlotProps<T>
-  date: SlotProps<T>
-  title: SlotProps<T>
-  description: SlotProps<T>
+  indicator?: SlotProps<T>
+  wrapper?: SlotProps<T>
+  date?: SlotProps<T>
+  title?: SlotProps<T>
+  description?: SlotProps<T>
 } & DynamicSlots<T, 'indicator' | 'wrapper' | 'date' | 'title' | 'description', { item: T }>
 
 </script>
@@ -72,22 +74,26 @@ export type TimelineSlots<T extends TimelineItem = TimelineItem> = {
 import { computed } from 'vue'
 import { Primitive, Separator } from 'reka-ui'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { tv } from '../utils/tv'
 import { get } from '../utils'
 import UAvatar from './Avatar.vue'
 
-const props = withDefaults(defineProps<TimelineProps<T>>(), {
+const _props = withDefaults(defineProps<TimelineProps<T>>(), {
   orientation: 'vertical',
   valueKey: 'value'
 })
 const emits = defineEmits<TimelineEmits<T>>()
 const slots = defineSlots<TimelineSlots<T>>()
 
+const props = useComponentProps<TimelineProps<T>>('timeline', _props)
+
 const modelValue = defineModel<string | number>()
 
 const appConfig = useAppConfig() as Timeline['AppConfig']
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.timeline || {}) })({
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.timeline || {}) })({
   orientation: props.orientation,
   size: props.size,
   color: props.color,
@@ -125,9 +131,9 @@ function onSelect(event: Event, item: T) {
 </script>
 
 <template>
-  <Primitive :as="as" :data-orientation="orientation" data-slot="root" :class="ui.root({ class: [props.ui?.root, props.class] })">
+  <Primitive :as="props.as" :data-orientation="props.orientation" data-slot="root" :class="ui.root({ class: [props.ui?.root, props.class] })">
     <div
-      v-for="(item, index) in items"
+      v-for="(item, index) in props.items"
       :key="index"
       data-slot="item"
       :class="ui.item({ class: [props.ui?.item, item.ui?.item, item.class] })"
@@ -136,7 +142,7 @@ function onSelect(event: Event, item: T) {
     >
       <div data-slot="container" :class="ui.container({ class: [props.ui?.container, item.ui?.container] })">
         <UAvatar
-          :size="size"
+          :size="props.size"
           :icon="item.icon"
           v-bind="typeof item.avatar === 'object' ? item.avatar : {}"
           data-slot="indicator"
@@ -147,7 +153,7 @@ function onSelect(event: Event, item: T) {
         </UAvatar>
 
         <Separator
-          v-if="index < items.length - 1"
+          v-if="index < props.items.length - 1"
           data-slot="separator"
           :class="ui.separator({ class: [props.ui?.separator, item.ui?.separator] })"
           :orientation="props.orientation"

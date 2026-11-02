@@ -1,88 +1,42 @@
+import { defineMcpTool } from '@nuxtjs/mcp-toolkit/server'
+import { useEvent } from 'nitropack/runtime'
+import { createError } from 'h3'
 import { z } from 'zod'
+import { getAgentDocument } from '#agent-discovery'
 
 export default defineMcpTool({
-  description: 'Retrieves documentation page content by URL path. Use the `sections` parameter to fetch only specific h2 sections to reduce response size.',
+  description: 'Returns the Markdown content of one documentation page by its URL path, as found in the `path` field of `search-documentation`. Pass `headings` to return only the named h2 sections and reduce response size. The result is the Markdown string only, with no metadata. A path that names a section resolves to its first page. For a component, `get-component` returns the same content with metadata. Fails when no page exists at the path.',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  },
   inputSchema: {
     path: z.string().describe('The path to the content page (e.g., /docs/components/button)'),
-    sections: z.array(z.string()).optional().describe('Specific h2 section titles to return (e.g., ["Usage", "API"]). If omitted, returns full documentation.')
+    headings: z.array(z.string()).optional().describe('Specific h2 heading titles to extract (e.g., ["Usage", "API"]). If omitted, returns full page.')
   },
+  inputExamples: [
+    { path: '/docs/components/button', headings: ['Usage', 'API'] },
+    { path: '/docs/getting-started/installation' }
+  ],
   cache: '30m',
-  async handler({ path, sections }) {
-    try {
-      const fullContent = await $fetch<string>(`/raw${path}.md`)
+  async handler({ path, headings }) {
+    const event = useEvent()
 
-      let content = fullContent
-
-      // If sections are specified, extract only those sections
-      if (sections && sections.length > 0) {
-        content = extractSections(fullContent, sections)
-      }
-
-      return {
-        content: [{ type: 'text' as const, text: content }]
-      }
-    } catch (error) {
-      return errorResult(`Failed to fetch documentation page: ${error}`)
+    // Resolved in-process by the same adapter `/raw/**.md` uses, so the tool
+    // returns the bytes the URL does without a second request out of the
+    // function. A path naming a section resolves to its first document, which
+    // is what following the raw route's redirect used to do.
+    let document = await getAgentDocument(event, path, { sections: headings })
+    if (document && 'redirect' in document) {
+      document = await getAgentDocument(event, document.redirect, { sections: headings })
     }
+
+    if (!document || 'redirect' in document) {
+      throw createError({ statusCode: 404, message: `Documentation page not found at path: ${path}` })
+    }
+
+    return document.markdown
   }
 })
-
-/**
- * Extract specific sections from markdown content based on h2 headings
- */
-function extractSections(markdown: string, sectionTitles: string[]): string {
-  const lines = markdown.split('\n')
-  const result: string[] = []
-
-  // Normalize section titles for matching
-  const normalizedTitles = sectionTitles.map(t => t.toLowerCase().trim())
-
-  // Always include title (h1) and description (first blockquote)
-  let inHeader = true
-  for (const line of lines) {
-    if (inHeader) {
-      result.push(line)
-      // Stop after the description blockquote
-      if (line.startsWith('>') && result.length > 1) {
-        result.push('')
-        inHeader = false
-      }
-      continue
-    }
-    break
-  }
-
-  // Find and extract requested sections
-  let currentSection: string | null = null
-  let sectionContent: string[] = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-
-    // Check for h2 heading
-    if (line.startsWith('## ')) {
-      // Save previous section if it was requested
-      if (currentSection && normalizedTitles.includes(currentSection.toLowerCase())) {
-        result.push(...sectionContent)
-        result.push('')
-      }
-
-      // Start new section
-      currentSection = line.replace('## ', '').trim()
-      sectionContent = [line]
-      continue
-    }
-
-    // Add line to current section
-    if (currentSection) {
-      sectionContent.push(line)
-    }
-  }
-
-  // Don't forget the last section
-  if (currentSection && normalizedTitles.includes(currentSection.toLowerCase())) {
-    result.push(...sectionContent)
-  }
-
-  return result.join('\n').trim()
-}

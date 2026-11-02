@@ -1,9 +1,10 @@
 <script lang="ts">
-import type { Ref } from 'vue'
+import type { Ref, VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/button'
 import type { UseComponentIconsProps } from '../composables/useComponentIcons'
-import type { LinkProps, AvatarProps } from '../types'
+import type { LinkProps } from './Link.vue'
+import type { AvatarProps } from './Avatar.vue'
 import type { ComponentConfig } from '../types/tv'
 
 type Button = ComponentConfig<typeof theme, AppConfig, 'button'>
@@ -30,41 +31,56 @@ export interface ButtonProps extends UseComponentIconsProps, Omit<LinkProps, 'ra
   block?: boolean
   /** Set loading state automatically based on the `@click` promise state */
   loadingAuto?: boolean
-  onClick?: ((event: MouseEvent) => void | Promise<void>) | Array<((event: MouseEvent) => void | Promise<void>)>
+  onClick?: ((event: MouseEvent) => void) | Array<((event: MouseEvent) => void)>
   class?: any
   ui?: Button['slots']
 }
 
 export interface ButtonSlots {
-  leading(props: { ui: Button['ui'] }): any
-  default(props: { ui: Button['ui'] }): any
-  trailing(props: { ui: Button['ui'] }): any
+  leading?(props: { ui: Button['ui'] }): VNode[]
+  default?(props: { ui: Button['ui'] }): VNode[]
+  trailing?(props: { ui: Button['ui'] }): VNode[]
 }
 </script>
 
 <script setup lang="ts">
 import { computed, ref, inject } from 'vue'
 import { defu } from 'defu'
-import { useForwardProps } from 'reka-ui'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { useComponentIcons } from '../composables/useComponentIcons'
 import { useFieldGroup } from '../composables/useFieldGroup'
 import { formLoadingInjectionKey } from '../composables/useFormField'
-import { omit, mergeClasses } from '../utils'
+import { mergeClasses } from '../utils'
 import { tv } from '../utils/tv'
-import { pickLinkProps } from '../utils/link'
+import { linkKeys, LinkSlot } from '../utils/link'
 import UIcon from './Icon.vue'
 import UAvatar from './Avatar.vue'
 import ULink from './Link.vue'
 import ULinkBase from './LinkBase.vue'
 
-const props = defineProps<ButtonProps>()
+const _props = defineProps<ButtonProps>()
 const slots = defineSlots<ButtonSlots>()
 
-const appConfig = useAppConfig() as Button['AppConfig']
-const { orientation, size: buttonSize } = useFieldGroup<ButtonProps>(props)
+const props = useComponentProps('button', _props)
 
-const linkProps = useForwardProps(pickLinkProps(props))
+const appConfig = useAppConfig() as Button['AppConfig']
+const { orientation, size: buttonSize } = useFieldGroup<ButtonProps>(_props)
+
+// Without `to` or `href`, `LinkSlot` stands in for the Link and these are never read
+const isLink = computed(() => !!(props.to ?? props.href))
+
+// Reads only the link props through the `useComponentProps` proxy, `type`,
+// `disabled` and `onClick` are bound separately
+const forwardedLinkProps = computed(() => {
+  const forwarded: Record<string, any> = {}
+  for (const key of linkKeys) {
+    if (key === 'type' || key === 'disabled' || key === 'onClick') continue
+    const value = props[key as keyof typeof props]
+    if (value !== undefined) forwarded[key] = value
+  }
+  return forwarded
+})
 
 const loadingAutoState = ref(false)
 const formLoading = inject<Ref<boolean> | undefined>(formLoadingInjectionKey, undefined)
@@ -83,12 +99,25 @@ const isLoading = computed(() => {
   return props.loading || (props.loadingAuto && (loadingAutoState.value || (formLoading?.value && props.type === 'submit')))
 })
 
+// Pass only the props the composable reads: a `{ ...props }` spread would walk
+// every prop through the `useComponentProps` proxy and subscribe this computed
+// (and `ui`, which reads `isLeading`/`isTrailing`) to all of them, re-running
+// the whole tv pipeline on unrelated prop changes like `class`.
 const { isLeading, isTrailing, leadingIconName, trailingIconName } = useComponentIcons(
-  computed(() => ({ ...props, loading: isLoading.value }))
+  computed(() => ({
+    icon: props.icon,
+    leading: props.leading,
+    leadingIcon: props.leadingIcon,
+    trailing: props.trailing,
+    trailingIcon: props.trailingIcon,
+    loading: isLoading.value,
+    loadingIcon: props.loadingIcon
+  }))
 )
 
+// eslint-disable-next-line vue/no-dupe-keys
 const ui = computed(() => tv({
-  extend: tv(theme),
+  extend: theme,
   ...defu({
     variants: {
       active: {
@@ -104,7 +133,7 @@ const ui = computed(() => tv({
 })({
   color: props.color,
   variant: props.variant,
-  size: buttonSize.value,
+  size: buttonSize.value ?? props.size,
   loading: isLoading.value,
   block: props.block,
   square: props.square || (!slots.default && !props.label),
@@ -115,32 +144,33 @@ const ui = computed(() => tv({
 </script>
 
 <template>
-  <ULink
+  <component
+    :is="isLink ? ULink : LinkSlot"
     v-slot="{ active, ...slotProps }"
-    :type="type"
-    :disabled="disabled || isLoading"
-    v-bind="omit(linkProps, ['type', 'disabled', 'onClick'])"
+    :type="props.type"
+    :disabled="props.disabled || isLoading"
+    v-bind="isLink ? forwardedLinkProps : { as: props.as, active: props.active }"
     custom
   >
     <ULinkBase
-      v-bind="slotProps"
       data-slot="base"
+      v-bind="slotProps"
       :class="ui.base({
         class: [props.ui?.base, props.class],
         active,
-        ...(active && activeVariant ? { variant: activeVariant } : {}),
-        ...(active && activeColor ? { color: activeColor } : {})
+        ...(active && props.activeVariant ? { variant: props.activeVariant } : {}),
+        ...(active && props.activeColor ? { color: props.activeColor } : {})
       })"
       @click="onClickWrapper"
     >
       <slot name="leading" :ui="ui">
         <UIcon v-if="isLeading && leadingIconName" :name="leadingIconName" data-slot="leadingIcon" :class="ui.leadingIcon({ class: props.ui?.leadingIcon, active })" />
-        <UAvatar v-else-if="!!avatar" :size="((props.ui?.leadingAvatarSize || ui.leadingAvatarSize()) as AvatarProps['size'])" v-bind="avatar" data-slot="leadingAvatar" :class="ui.leadingAvatar({ class: props.ui?.leadingAvatar, active })" />
+        <UAvatar v-else-if="!!props.avatar" :size="((props.ui?.leadingAvatarSize || ui.leadingAvatarSize()) as AvatarProps['size'])" v-bind="props.avatar" data-slot="leadingAvatar" :class="ui.leadingAvatar({ class: props.ui?.leadingAvatar, active })" />
       </slot>
 
       <slot :ui="ui">
-        <span v-if="label !== undefined && label !== null" data-slot="label" :class="ui.label({ class: props.ui?.label, active })">
-          {{ label }}
+        <span v-if="props.label !== undefined && props.label !== null" data-slot="label" :class="ui.label({ class: props.ui?.label, active })">
+          {{ props.label }}
         </span>
       </slot>
 
@@ -148,5 +178,5 @@ const ui = computed(() => tv({
         <UIcon v-if="isTrailing && trailingIconName" :name="trailingIconName" data-slot="trailingIcon" :class="ui.trailingIcon({ class: props.ui?.trailingIcon, active })" />
       </slot>
     </ULinkBase>
-  </ULink>
+  </component>
 </template>

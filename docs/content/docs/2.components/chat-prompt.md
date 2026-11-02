@@ -15,52 +15,18 @@ links:
 
 The ChatPrompt component renders a `<form>` element and extends the [Textarea](/docs/components/textarea) component so you can pass any property such as `icon`, `placeholder`, `autofocus`, etc.
 
-::code-preview
-
-:::u-chat-prompt
+::component-example
 ---
-variant: 'subtle'
+collapse: true
+name: 'chat-prompt-example'
 ---
-
-#default
-::::u-chat-prompt-submit
----
-color: 'neutral'
-class: 'rounded-full'
----
-::::
-
-#footer
-::::u-select
----
-placeholder: 'Select a model'
-variant: 'ghost'
-icon: 'i-simple-icons-openai'
-modelValue: 'gpt-4o'
-items:
-  - label: 'Gemini 2.5 Pro'
-    value: 'gemini-2.5-pro'
-    icon: 'i-simple-icons-googlegemini'
-  - label: 'GPT-4o'
-    value: 'gpt-4o'
-    icon: 'i-simple-icons-openai'
-  - label: 'Claude 3.5 Sonnet'
-    value: 'claude-3.5-sonnet'
-    icon: 'i-simple-icons-anthropic'
-  - label: 'Llama 4'
-    value: 'llama-4'
-    icon: 'i-simple-icons-ollama'
----
-::::
-
-:::
-
 ::
 
 ::note
 The ChatPrompt handles the following events:
 
-- The form is submitted when the user presses :kbd{value="enter"} or when the user clicks on the submit button.
+- The form is submitted when the user presses :kbd{value="enter"} or when the user clicks on the submit button. Set the `submit-on-enter` prop to `false` to submit with :kbd{value="ctrl"} + :kbd{value="enter"} (or :kbd{value="cmd"} + :kbd{value="enter"} on macOS) instead, allowing :kbd{value="enter"} to insert a newline.
+- The form is not submitted while the `status` prop is `submitted` or `streaming`, so pressing :kbd{value="enter"} during a response doesn't send a second message.
 - The textarea is blurred when :kbd{value="escape"} is pressed and emits a `close` event.
 ::
 
@@ -78,78 +44,124 @@ props:
 ---
 ::
 
-## Examples
+### Files :badge{label="Soon" class="align-text-top"}
 
-::tip{to="/docs/components/chat-messages#examples"}
-Check the **ChatMessages** documentation for server API setup and installation instructions.
+Use the `v-model:files` directive to let users attach files. They can paste them in the textarea or drop them on the prompt, and each one shows above the textarea as a [ChatAttachment](/docs/components/chat-attachment) they can remove. The `#footer` slot receives an `open` function to pick files from a button.
+
+::component-example
+---
+collapse: true
+name: 'chat-prompt-files-example'
+---
 ::
 
-### Within a page
+::tip
+Use the `attachment` prop to customize the attachments, like `{ variant: 'thumbnail', size: 'xl' }`{lang="ts-type"} for image previews, or the `#files` slot to render them yourself.
+::
 
-Use the ChatPrompt component with the `Chat` class from AI SDK v5 to display a chat prompt within a page.
+::note
+Use the `accept` prop to restrict the file types and set `multiple` to `false` to keep a single file. The form is submitted with files even when the textarea is empty. While a file is dragged over the prompt, its root has `data-dragging="true"`, which you can style with `data-[dragging=true]:`.
+::
 
-Pass the `input` prop alongside the `error` prop to disable the textarea when an error occurs.
+::tip
+Use the `toFileUIParts` utility from `@nuxt/ui/utils/ai` to send the files as data URLs with the AI SDK, and the `#files` slot of [ChatMessages](/docs/components/chat-messages) to display them in the conversation.
 
-```vue [pages/\[id\\].vue] {2,5,13-17,34,36}
+```vue
 <script setup lang="ts">
-import { Chat } from '@ai-sdk/vue'
+import { useChat } from '@ai-sdk/vue'
+import { toFileUIParts } from '@nuxt/ui/utils/ai'
 
 const input = ref('')
+const files = ref<File[]>([])
 
-const chat = new Chat({
-  onError(error) {
-    console.error(error)
-  }
-})
+const { messages, status, sendMessage } = useChat()
 
-function onSubmit() {
-  chat.sendMessage({ text: input.value })
+async function onSubmit() {
+  const text = input.value
+  const submitted = files.value
 
   input.value = ''
+  files.value = []
+
+  const parts = await toFileUIParts(submitted)
+  sendMessage(text.trim() ? { text, files: parts } : { files: parts })
 }
 </script>
 
 <template>
-  <UDashboardPanel>
-    <template #body>
-      <UContainer>
-        <UChatMessages :messages="chat.messages" :status="chat.status">
-          <template #content="{ message }">
-            <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-              <MDC v-if="part.type === 'text' && message.role === 'assistant'" :value="part.text" :cache-key="`${message.id}-${index}`" class="*:first:mt-0 *:last:mb-0" />
-              <p v-else-if="part.type === 'text' && message.role === 'user'" class="whitespace-pre-wrap">{{ part.text }}</p>
-            </template>
-          </template>
-        </UChatMessages>
-      </UContainer>
+  <UChatMessages :messages="messages" :status="status">
+    <template #files="{ parts }">
+      <UChatAttachment
+        v-for="(part, index) in parts"
+        :key="index"
+        :name="part.filename"
+        :type="part.mediaType"
+        :url="part.url"
+      />
     </template>
+  </UChatMessages>
 
-    <template #footer>
-      <UContainer class="pb-4 sm:pb-6">
-        <UChatPrompt v-model="input" :error="chat.error" @submit="onSubmit">
-          <UChatPromptSubmit :status="chat.status" @stop="chat.stop()" @reload="chat.regenerate()" />
-        </UChatPrompt>
-      </UContainer>
-    </template>
-  </UDashboardPanel>
+  <UChatPrompt v-model="input" v-model:files="files" @submit="onSubmit">
+    <UChatPromptSubmit :status="status" />
+  </UChatPrompt>
 </template>
 ```
+::
 
-You can also use it as a starting point for a chat interface.
+### Queue :badge{label="Soon" class="align-text-top"}
+
+Use the `v-model:queue` directive to queue the messages submitted while the chat is `submitted` or `streaming` instead of ignoring them. They show in a panel attached above the prompt, where the user can send one now, put it back in the prompt to edit it, or remove it. The `send` event is emitted when one is picked to be sent now, after it moved to the front of the queue.
+
+::component-example
+---
+collapse: true
+name: 'chat-prompt-queue-example'
+---
+::
+
+::tip{to="#with-queued-messages"}
+Sending the queued messages is up to you, check the **With queued messages** example for a recipe with the AI SDK.
+::
+
+## Examples
+
+::tip{to="/docs/components/chat"}
+Check the **Chat** overview page for installation instructions, server setup and usage examples.
+::
+
+### With an Editor :badge{label="4.10+" class="align-text-top"}
+
+Compose the `#body` and `#footer` slots with `v-model:files` to build a rich prompt: file attachments, an [Editor](/docs/components/editor) with `@` mentions and `/` commands through [EditorMentionMenu](/docs/components/editor-mention-menu), and a mode selector.
+
+::component-example
+---
+collapse: true
+name: 'chat-prompt-editor-example'
+class: 'justify-center'
+---
+::
+
+::note
+The `#body` slot replaces the internal textarea and exposes `submit` and `close` handlers, so you can wire the editor's keyboard shortcuts to the form. When a mention menu is open, pressing :kbd{value="enter"} selects the highlighted item instead of submitting.
+::
+
+### As home page
+
+You can also use it in your chat interface home page.
 
 ```vue [pages/index.vue] {2,4,8-15,24,26}
 <script setup lang="ts">
-import { Chat } from '@ai-sdk/vue'
+import { useChat } from '@ai-sdk/vue'
 
 const input = ref('')
 
-const chat = new Chat()
+const { messages, status, sendMessage } = useChat()
 
 async function onSubmit() {
-  chat.sendMessage({ text: input.value })
+  sendMessage({ text: input.value })
 
   // Navigate to chat page after first message
-  if (chat.messages.length === 1) {
+  if (messages.value.length === 1) {
     await navigateTo('/chat')
   }
 }
@@ -161,14 +173,133 @@ async function onSubmit() {
       <UContainer>
         <h1>How can I help you today?</h1>
 
-        <UChatPrompt v-model="input" @submit="onSubmit">
-          <UChatPromptSubmit :status="chat.status" />
+        <UChatPrompt v-model="input" :status="status" @submit="onSubmit">
+          <UChatPromptSubmit :status="status" />
         </UChatPrompt>
       </UContainer>
     </template>
   </UDashboardPanel>
 </template>
 ```
+
+### With queued messages :badge{label="Soon" class="align-text-top"}
+
+The AI SDK doesn't queue messages: calling `sendMessage` during a response starts a second request next to the current one. With `status`, `UChatPrompt` ignores submits while the chat is `submitted` or `streaming`. Bind `v-model:queue` to keep them instead: the prompt lists the queued messages in a panel above it, where the user can send one now, edit it or remove it, and you send the next one once the chat is `ready` again.
+
+::framework-only
+#nuxt
+```vue
+<script setup lang="ts">
+import type { ChatPromptQueueItem } from '@nuxt/ui'
+import { useChat } from '@ai-sdk/vue'
+
+const input = ref('')
+const queue = ref<ChatPromptQueueItem[]>([])
+
+const { status, error, sendMessage, regenerate, stop } = useChat()
+
+function onSubmit() {
+  sendMessage({ text: input.value })
+  input.value = ''
+}
+
+function sendNext() {
+  const item = queue.value.shift()
+  if (item) {
+    sendMessage({ text: item.text })
+  }
+}
+
+watch(status, (value) => {
+  if (value === 'ready') {
+    sendNext()
+  }
+})
+
+// The message picked to be sent now is at the front of the queue
+function onSend() {
+  if (status.value === 'submitted' || status.value === 'streaming') {
+    stop()
+  } else {
+    sendNext()
+  }
+}
+</script>
+
+<template>
+  <UChatPrompt
+    v-model="input"
+    v-model:queue="queue"
+    :status="status"
+    :error="error"
+    @submit="onSubmit"
+    @send="onSend"
+  >
+    <UChatPromptSubmit :status="status" @stop="stop()" @reload="regenerate()" />
+  </UChatPrompt>
+</template>
+```
+
+#vue
+```vue
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import type { ChatPromptQueueItem } from '@nuxt/ui'
+import { useChat } from '@ai-sdk/vue'
+
+const input = ref('')
+const queue = ref<ChatPromptQueueItem[]>([])
+
+const { status, error, sendMessage, regenerate, stop } = useChat()
+
+function onSubmit() {
+  sendMessage({ text: input.value })
+  input.value = ''
+}
+
+function sendNext() {
+  const item = queue.value.shift()
+  if (item) {
+    sendMessage({ text: item.text })
+  }
+}
+
+watch(status, (value) => {
+  if (value === 'ready') {
+    sendNext()
+  }
+})
+
+// The message picked to be sent now is at the front of the queue
+function onSend() {
+  if (status.value === 'submitted' || status.value === 'streaming') {
+    stop()
+  } else {
+    sendNext()
+  }
+}
+</script>
+
+<template>
+  <UChatPrompt
+    v-model="input"
+    v-model:queue="queue"
+    :status="status"
+    :error="error"
+    @submit="onSubmit"
+    @send="onSend"
+  >
+    <UChatPromptSubmit :status="status" @stop="stop()" @reload="regenerate()" />
+  </UChatPrompt>
+</template>
+```
+::
+
+After an `error`, the prompt is disabled and the queue waits until the user reloads the failed response. Stopping the response sends the next queued message right away.
+
+::note
+With [tool approval](/docs/components/chat-tool#with-approval-flow), a response waiting for the user's answer is `ready` too. Skip `sendNext` while the last message has a part in the `approval-requested` state, a new message would leave the approval unanswered.
+::
 
 ## API
 
@@ -195,6 +326,7 @@ When accessing the component via a template ref, you can use the following:
 | Name | Type |
 | ---- | ---- |
 | `textareaRef`{lang="ts-type"} | `Ref<HTMLTextAreaElement \| null>`{lang="ts-type"} |
+| `open()`{lang="ts-type"} | `void`{lang="ts-type"} |
 
 ## Theme
 

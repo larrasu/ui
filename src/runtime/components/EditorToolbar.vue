@@ -1,11 +1,15 @@
 <!-- eslint-disable vue/block-tag-newline -->
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import type { Editor } from '@tiptap/vue-3'
 import type { BubbleMenuPluginProps } from '@tiptap/extension-bubble-menu'
 import type { FloatingMenuPluginProps } from '@tiptap/extension-floating-menu'
 import theme from '#build/ui/editor-toolbar'
-import type { ButtonProps, DropdownMenuProps, DropdownMenuItem, TooltipProps, LinkPropsKeys } from '../types'
+import type { ButtonProps } from './Button.vue'
+import type { DropdownMenuProps, DropdownMenuItem } from './DropdownMenu.vue'
+import type { TooltipProps } from './Tooltip.vue'
+import type { LinkPropsKeys } from './Link.vue'
 import type { EditorItem, EditorCustomHandlers } from '../types/editor'
 import type { ArrayOrNested, DynamicSlots, MergeTypes, NestedItem } from '../types/utils'
 import type { ComponentConfig } from '../types/tv'
@@ -83,24 +87,26 @@ type SlotPropsProps = {
   isDisabled: (item: EditorToolbarItem) => boolean
   onClick: (e: MouseEvent, item: EditorToolbarItem) => void
 }
-type SlotProps<T extends EditorToolbarItem> = (props: { item: T } & SlotPropsProps) => any
+type SlotProps<T extends EditorToolbarItem> = (props: { item: T } & SlotPropsProps) => VNode[]
 
 export type EditorToolbarSlots<
   A extends ArrayOrNested<EditorToolbarItem> = ArrayOrNested<EditorToolbarItem>,
   T extends NestedItem<A> = NestedItem<A>
 > = {
-  item: SlotProps<T>
+  item?: SlotProps<T>
 } & DynamicSlots<MergeTypes<T>, undefined, SlotPropsProps>
 
 </script>
 
 <script setup lang="ts" generic="T extends ArrayOrNested<EditorToolbarItem>">
 import { computed, inject } from 'vue'
-import { Primitive, Separator, useForwardProps } from 'reka-ui'
+import { Primitive, Separator } from 'reka-ui'
 import { defu } from 'defu'
 import { BubbleMenu, FloatingMenu } from '@tiptap/vue-3/menus'
 import { reactiveOmit } from '@vueuse/core'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
+import { useForwardProps } from '../composables/useForwardProps'
 import { isArrayOfArray, pick, omit } from '../utils'
 import { createHandlers } from '../utils/editor'
 import { tv } from '../utils/tv'
@@ -110,7 +116,7 @@ import UTooltip from './Tooltip.vue'
 
 defineOptions({ inheritAttrs: false })
 
-const props = withDefaults(defineProps<EditorToolbarProps<T>>(), {
+const _props = withDefaults(defineProps<EditorToolbarProps<T>>(), {
   layout: 'fixed',
   color: 'neutral',
   variant: 'ghost',
@@ -119,6 +125,8 @@ const props = withDefaults(defineProps<EditorToolbarProps<T>>(), {
   size: 'sm'
 })
 defineSlots<EditorToolbarSlots<T>>()
+
+const props = useComponentProps<EditorToolbarProps<T>>('editorToolbar', _props)
 
 const appConfig = useAppConfig() as EditorToolbar['AppConfig']
 
@@ -129,7 +137,7 @@ const Component = computed(() => {
     bubble: BubbleMenu,
     floating: FloatingMenu,
     fixed: 'template'
-  }[props.layout])
+  }[props.layout!])
 })
 
 const rootProps = useForwardProps(reactiveOmit(props, 'as', 'color', 'variant', 'activeColor', 'activeVariant', 'size', 'items', 'layout', 'editor', 'class', 'ui'))
@@ -139,15 +147,16 @@ const options = computed(() => defu((props as any).options, {
   shift: { padding: 8 }
 }))
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.editorToolbar || {}) })({
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.editorToolbar || {}) })({
   layout: props.layout
 }))
 
-const groups = computed<EditorToolbarItem[][]>(() =>
+const groups = computed(() =>
   props.items?.length
     ? isArrayOfArray(props.items)
       ? props.items
-      : [props.items]
+      : [props.items as NestedItem<T>[]]
     : []
 )
 
@@ -256,11 +265,12 @@ function getButtonProps(item: EditorToolbarItem) {
   }
 
   return defu(baseProps, {
-    color: props.color,
-    activeColor: props.activeColor,
-    activeVariant: props.activeVariant,
-    variant: props.variant,
-    size: props.size
+    'aria-label': baseProps.label ? undefined : item.tooltip?.text,
+    'color': props.color,
+    'activeColor': props.activeColor,
+    'activeVariant': props.activeVariant,
+    'variant': props.variant,
+    'size': props.size
   })
 }
 
@@ -273,7 +283,7 @@ function getDropdownProps(item: EditorToolbarDropdownItem) {
   })
 }
 
-function mapDropdownItem(item: EditorToolbarDropdownChildItem): any {
+function mapDropdownItem(item: EditorToolbarDropdownChildItem): DropdownMenuItem {
   // Recursively map children if present
   const children = 'children' in item && Array.isArray(item.children)
     ? item.children.map(mapDropdownItem)
@@ -309,7 +319,7 @@ function getDropdownItems(item: EditorToolbarDropdownItem) {
   <Primitive
     :as="Component"
     v-bind="Component !== 'template' ? {
-      editor,
+      editor: props.editor,
       tabindex: -1,
       class: ui.root({ class: props.ui?.root }),
       ...rootProps,
@@ -319,7 +329,7 @@ function getDropdownItems(item: EditorToolbarDropdownItem) {
       ...$attrs
     }"
   >
-    <Primitive :as="as" role="toolbar" data-slot="base" :class="ui.base({ class: [props.ui?.base, props.class] })">
+    <Primitive :as="props.as" role="toolbar" data-slot="base" :class="ui.base({ class: [props.ui?.base, props.class] })">
       <template v-for="(group, groupIndex) in groups" :key="`group-${groupIndex}`">
         <div role="group" data-slot="group" :class="ui.group({ class: props.ui?.group })">
           <template v-for="(item, index) in group" :key="`group-${groupIndex}-${index}`">

@@ -1,14 +1,17 @@
+import { defineMcpTool } from '@nuxtjs/mcp-toolkit/server'
 // @ts-expect-error - no types available
-import components from '#component-example/nitro'
+import { listComponentExamples } from '#component-example/nitro'
 
 export default defineMcpTool({
-  description: 'Lists all available UI examples and code demonstrations',
+  description: 'Lists the names of all available UI examples. Returns names only, not code: pass a name to `get-example` to read its source.',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  },
   cache: '1h',
   handler() {
-    const examples = Object.entries<{ pascalName: string }>(components).map(([_key, value]) => {
-      return value.pascalName
-    })
-
-    return jsonResult(examples)
+    return listComponentExamples()
   }
 })

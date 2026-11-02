@@ -1,6 +1,10 @@
 ---
 description: A short text to represent a status or a category.
 category: element
+keywords:
+  - tag
+  - pill
+  - label
 links:
   - label: GitHub
     icon: i-simple-icons-github
@@ -104,9 +108,12 @@ Use the `avatar` prop to show an [Avatar](/docs/components/avatar) inside the Ba
 ::component-code
 ---
 prettier: true
+ignore:
+  - avatar.loading
 props:
   avatar:
     src: 'https://github.com/nuxt.png'
+    loading: lazy
   size: md
   color: neutral
   variant: outline

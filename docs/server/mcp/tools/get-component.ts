@@ -1,16 +1,32 @@
+import { defineMcpTool } from '@nuxtjs/mcp-toolkit/server'
+import { useEvent } from 'nitropack/runtime'
+import { createError } from 'h3'
 import { z } from 'zod'
 import { kebabCase } from 'scule'
 import { queryCollection } from '@nuxt/content/server'
-import { normalizeComponentName } from '~~/server/utils/normalizeComponentName'
+import { getAgentDocument } from '#agent-discovery'
+import { normalizeComponentName } from '../../utils/normalizeComponentName'
+import { SITE_URL } from '../../utils/site'
 
 const sectionEnum = z.enum(['usage', 'examples', 'api', 'theme', 'changelog'])
 
 export default defineMcpTool({
-  description: 'Retrieves Nuxt UI component documentation and details. Use the `sections` parameter to fetch only specific parts of the documentation to reduce response size.',
+  description: 'Retrieves Nuxt UI component documentation and details. Use the `sections` parameter to fetch only specific parts of the documentation to reduce response size. Use `get-component-metadata` instead when you only need structured props, slots and events.',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  },
   inputSchema: {
-    componentName: z.string().describe('The name of the component (PascalCase)'),
+    componentName: z.string().describe('Component name. Accepts `Button`, `UButton`, `button` or `u-button`.'),
     sections: z.array(sectionEnum).optional().describe('Specific sections to return: usage, examples, api, theme, changelog. If omitted, returns full documentation.')
   },
+  inputExamples: [
+    { componentName: 'Button', sections: ['usage', 'api'] },
+    { componentName: 'UModal' },
+    { componentName: 'Table', sections: ['examples'] }
+  ],
   cache: '30m',
   async handler({ componentName, sections }) {
     const event = useEvent()
@@ -29,94 +45,25 @@ export default defineMcpTool({
       .first()
 
     if (!page) {
-      return errorResult(`Component '${componentName}' not found in documentation`)
+      throw createError({ statusCode: 404, message: `Component '${componentName}' not found in documentation` })
     }
 
-    const fullDocumentation = await $fetch<string>(`/raw${page.path}.md`)
-
-    let documentation = fullDocumentation
-
-    // If sections are specified, extract only those sections
-    if (sections && sections.length > 0) {
-      documentation = extractSections(fullDocumentation, sections)
+    // Same document `/raw/**.md` serves, resolved in-process rather than
+    // fetched back out of the function, and narrowed to the requested `##`
+    // sections by the module.
+    const document = await getAgentDocument(event, page.path, { sections })
+    if (!document || 'redirect' in document) {
+      throw createError({ statusCode: 404, message: `Component '${componentName}' has no documentation page` })
     }
 
-    return jsonResult({
+    return {
       name: normalizedName,
       title: page.title,
       description: page.description,
       category: page.category,
-      documentation,
-      documentation_url: `https://ui.nuxt.com${page.path}`,
+      documentation: document.markdown,
+      documentation_url: `${SITE_URL}${page.path}`,
       sections_returned: sections || ['full']
-    })
+    }
   }
 })
-
-/**
- * Extract specific sections from markdown content based on h2 headings
- */
-function extractSections(markdown: string, sections: string[]): string {
-  const lines = markdown.split('\n')
-  const result: string[] = []
-
-  // Section mapping from parameter names to heading patterns
-  const sectionHeadings: Record<string, string[]> = {
-    usage: ['## Usage'],
-    examples: ['## Examples'],
-    api: ['## API'],
-    theme: ['## Theme'],
-    changelog: ['## Changelog']
-  }
-
-  // Always include title (h1) and description (first blockquote)
-  let inHeader = true
-  for (const line of lines) {
-    if (inHeader) {
-      result.push(line)
-      // Stop after the description blockquote
-      if (line.startsWith('>') && result.length > 1) {
-        result.push('')
-        inHeader = false
-      }
-      continue
-    }
-    break
-  }
-
-  // Find and extract requested sections
-  for (const section of sections) {
-    const headings = sectionHeadings[section]
-    if (!headings) continue
-
-    let inSection = false
-    const sectionContent: string[] = []
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-
-      // Check if we're entering a requested section
-      if (!inSection && headings.some(h => line.startsWith(h))) {
-        inSection = true
-        sectionContent.push(line)
-        continue
-      }
-
-      // Check if we're leaving the section (next h2)
-      if (inSection && line.startsWith('## ') && !headings.some(h => line.startsWith(h))) {
-        break
-      }
-
-      if (inSection) {
-        sectionContent.push(line)
-      }
-    }
-
-    if (sectionContent.length > 0) {
-      result.push(...sectionContent)
-      result.push('')
-    }
-  }
-
-  return result.join('\n').trim()
-}

@@ -1,10 +1,12 @@
 <!-- eslint-disable vue/block-tag-newline -->
 <script lang="ts">
-import type { ComponentPublicInstance } from 'vue'
+import type { ComponentPublicInstance, VNode } from 'vue'
 import type { TabsRootProps, TabsRootEmits } from 'reka-ui'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/tabs'
-import type { AvatarProps, BadgeProps, IconProps } from '../types'
+import type { AvatarProps } from './Avatar.vue'
+import type { BadgeProps } from './Badge.vue'
+import type { IconProps } from './Icon.vue'
 import type { DynamicSlots, GetItemKeys } from '../types/utils'
 import type { ComponentConfig } from '../types/tv'
 
@@ -24,11 +26,15 @@ export interface TabsItem {
   badge?: string | number | BadgeProps
   slot?: string
   content?: string
-  /** A unique value for the tab item. Defaults to the index. */
+  /**
+   * A unique value for the tab item. Defaults to the index.
+   * Also used as the Vue `key` for this item, so providing a stable value prevents tab
+   * content (and its local state) from remounting when items are added, removed, or reordered.
+   */
   value?: string | number
   disabled?: boolean
   class?: any
-  ui?: Pick<Tabs['slots'], 'trigger' | 'leadingIcon' | 'leadingAvatar' | 'leadingAvatarSize' | 'label' | 'trailingBadge' | 'trailingBadgeSize' | 'content'>
+  ui?: Partial<Pick<Tabs['slots'], 'trigger' | 'leadingIcon' | 'leadingAvatar' | 'leadingAvatarSize' | 'label' | 'trailingBadge' | 'trailingBadgeSize' | 'content'>>
   [key: string]: any
 }
 
@@ -77,31 +83,33 @@ export interface TabsProps<T extends TabsItem = TabsItem> extends Pick<TabsRootP
 
 export interface TabsEmits extends TabsRootEmits<string | number> {}
 
-type SlotProps<T extends TabsItem> = (props: { item: T, index: number, ui: Tabs['ui'] }) => any
+type SlotProps<T extends TabsItem> = (props: { item: T, index: number, ui: Tabs['ui'] }) => VNode[]
 
 export type TabsSlots<T extends TabsItem = TabsItem> = {
-  'leading': SlotProps<T>
-  'default'(props: { item: T, index: number }): any
-  'trailing': SlotProps<T>
-  'content': SlotProps<T>
-  'list-leading'(props?: {}): any
-  'list-trailing'(props?: {}): any
+  'leading'?: SlotProps<T>
+  'default'?(props: { item: T, index: number }): VNode[]
+  'trailing'?: SlotProps<T>
+  'content'?: SlotProps<T>
+  'list-leading'?(props?: {}): VNode[]
+  'list-trailing'?(props?: {}): VNode[]
 } & DynamicSlots<T, undefined, { index: number, ui: Tabs['ui'] }>
 
 </script>
 
 <script setup lang="ts" generic="T extends TabsItem">
 import { ref, computed } from 'vue'
-import { TabsRoot, TabsList, TabsIndicator, TabsTrigger, TabsContent, useForwardPropsEmits } from 'reka-ui'
+import { TabsRoot, TabsList, TabsIndicator, TabsTrigger, TabsContent } from 'reka-ui'
+import { useForwardProps } from '../composables/useForwardProps'
 import { reactivePick } from '@vueuse/core'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { get } from '../utils'
 import { tv } from '../utils/tv'
 import UIcon from './Icon.vue'
 import UAvatar from './Avatar.vue'
 import UBadge from './Badge.vue'
 
-const props = withDefaults(defineProps<TabsProps<T>>(), {
+const _props = withDefaults(defineProps<TabsProps<T>>(), {
   content: true,
   defaultValue: '0',
   orientation: 'horizontal',
@@ -112,11 +120,14 @@ const props = withDefaults(defineProps<TabsProps<T>>(), {
 const emits = defineEmits<TabsEmits>()
 const slots = defineSlots<TabsSlots<T>>()
 
+const props = useComponentProps<TabsProps<T>>('tabs', _props)
+
 const appConfig = useAppConfig() as Tabs['AppConfig']
 
-const rootProps = useForwardPropsEmits(reactivePick(props, 'as', 'unmountOnHide'), emits)
+const rootProps = useForwardProps(reactivePick(props, 'as', 'unmountOnHide'), emits)
 
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.tabs || {}) })({
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.tabs || {}) })({
   color: props.color,
   variant: props.variant,
   size: props.size,
@@ -124,6 +135,11 @@ const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.tabs || {}) 
 }))
 
 const triggersRef = ref<ComponentPublicInstance[]>([])
+
+function setTriggerRef(index: number, el: Element | ComponentPublicInstance | null) {
+  // @ts-expect-error - ComponentPublicInstance type mismatch in Nuxt module augmentation
+  triggersRef.value[index] = el
+}
 
 defineExpose({
   triggersRef
@@ -133,10 +149,10 @@ defineExpose({
 <template>
   <TabsRoot
     v-bind="rootProps"
-    :model-value="modelValue"
-    :default-value="defaultValue"
-    :orientation="orientation"
-    :activation-mode="activationMode"
+    :model-value="props.modelValue"
+    :default-value="props.defaultValue"
+    :orientation="props.orientation"
+    :activation-mode="props.activationMode"
     data-slot="root"
     :class="ui.root({ class: [props.ui?.root, props.class] })"
   >
@@ -146,9 +162,9 @@ defineExpose({
       <slot name="list-leading" />
 
       <TabsTrigger
-        v-for="(item, index) of items"
-        :key="index"
-        :ref="el => (triggersRef[index] = el as ComponentPublicInstance)"
+        v-for="(item, index) of props.items"
+        :key="get(item, props.valueKey as string) ?? index"
+        :ref="el => setTriggerRef(index, el)"
         :value="get(item, props.valueKey as string) ?? String(index)"
         :disabled="item.disabled"
         data-slot="trigger"
@@ -179,8 +195,8 @@ defineExpose({
       <slot name="list-trailing" />
     </TabsList>
 
-    <template v-if="!!content">
-      <TabsContent v-for="(item, index) of items" :key="index" :value="get(item, props.valueKey as string) ?? String(index)" data-slot="content" :class="ui.content({ class: [props.ui?.content, item.ui?.content, item.class] })">
+    <template v-if="!!props.content">
+      <TabsContent v-for="(item, index) of props.items" :key="get(item, props.valueKey as string) ?? index" :value="get(item, props.valueKey as string) ?? String(index)" data-slot="content" :class="ui.content({ class: [props.ui?.content, item.ui?.content, item.class] })">
         <slot :name="((item.slot || 'content') as keyof TabsSlots<T>)" :item="(item as Extract<T, { slot: string; }>)" :index="index" :ui="ui">
           {{ item.content }}
         </slot>

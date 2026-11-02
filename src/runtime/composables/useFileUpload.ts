@@ -1,5 +1,5 @@
 import type { ComponentPublicInstance, MaybeRef } from 'vue'
-import { ref, computed, unref, onMounted, watch, reactive } from 'vue'
+import { ref, computed, unref, onMounted, watch, reactive, effectScope } from 'vue'
 import { useFileDialog, useDropZone } from '@vueuse/core'
 
 export interface UseFileUploadOptions {
@@ -9,32 +9,37 @@ export interface UseFileUploadOptions {
    * @defaultValue '*'
    */
   accept?: MaybeRef<string>
-  reset?: boolean
-  multiple?: boolean
-  dropzone?: boolean
+  reset?: MaybeRef<boolean>
+  multiple?: MaybeRef<boolean>
+  dropzone?: MaybeRef<boolean>
   onUpdate: (files: File[]) => void
+  /**
+   * Called with the dropped files that do not match `accept`.
+   */
+  onReject?: (files: File[]) => void
 }
 
-function parseAcceptToDataTypes(accept: string): string[] | undefined {
-  if (!accept || accept === '*') {
-    return undefined
+export function isFileAccepted(file: File, accept: string): boolean {
+  const types = accept.split(',').map(type => type.trim().toLowerCase()).filter(Boolean)
+  if (!types.length) {
+    return true
   }
 
-  const types = accept
-    .split(',')
-    .map((type) => {
-      const trimmedType = type.trim()
+  const name = file.name.toLowerCase()
+  const mime = file.type.toLowerCase()
 
-      if (trimmedType.includes('/') && trimmedType.endsWith('/*')) {
-        return trimmedType.split('/')[0] || trimmedType
-      }
-      return trimmedType
-    })
-    .filter((type) => {
-      return !type.startsWith('.')
-    })
-
-  return types.length > 0 ? types : undefined
+  return types.some((type) => {
+    if (type === '*' || type === '*/*') {
+      return true
+    }
+    if (type.startsWith('.')) {
+      return name.endsWith(type)
+    }
+    if (type.endsWith('/*')) {
+      return mime.startsWith(type.slice(0, -1))
+    }
+    return mime === type
+  })
 }
 
 export function useFileUpload(options: UseFileUploadOptions) {
@@ -43,12 +48,11 @@ export function useFileUpload(options: UseFileUploadOptions) {
     reset = false,
     multiple = false,
     dropzone = true,
-    onUpdate
+    onUpdate,
+    onReject
   } = options
   const inputRef = ref<ComponentPublicInstance>()
   const dropzoneRef = ref<HTMLDivElement>()
-
-  const dataTypes = computed(() => parseAcceptToDataTypes(unref(accept)))
 
   const onDrop = (files: FileList | File[] | null, fromDropZone = false) => {
     if (!files || files.length === 0) {
@@ -57,7 +61,27 @@ export function useFileUpload(options: UseFileUploadOptions) {
     if (files instanceof FileList) {
       files = Array.from(files)
     }
-    if (files.length > 1 && !multiple) {
+
+    // The file dialog filters on `accept` natively, a drop has to be checked here.
+    if (fromDropZone) {
+      const rejected: File[] = []
+      files = files.filter((file) => {
+        if (isFileAccepted(file, unref(accept))) {
+          return true
+        }
+        rejected.push(file)
+        return false
+      })
+
+      if (rejected.length) {
+        onReject?.(rejected)
+      }
+      if (!files.length) {
+        return
+      }
+    }
+
+    if (files.length > 1 && !unref(multiple)) {
       files = [files[0]!]
     }
 
@@ -86,18 +110,31 @@ export function useFileUpload(options: UseFileUploadOptions) {
   }
 
   onMounted(() => {
-    const { isOverDropZone } = dropzone
-      ? useDropZone(dropzoneRef, { dataTypes: dataTypes.value, onDrop: files => onDrop(files, true) })
-      : { isOverDropZone: ref(false) }
+    // A fresh scope per enable, so VueUse's drag counter doesn't outlive a disable mid-drag.
+    watch(() => unref(dropzone), (enabled, _, onCleanup) => {
+      if (!enabled) {
+        return
+      }
 
-    watch(isOverDropZone, (value) => {
-      isDragging.value = value
-    })
+      const scope = effectScope()
+      scope.run(() => {
+        const { isOverDropZone } = useDropZone(dropzoneRef, { onDrop: files => onDrop(files, true) })
+
+        watch(isOverDropZone, (value) => {
+          isDragging.value = value
+        })
+      })
+
+      onCleanup(() => {
+        scope.stop()
+        isDragging.value = false
+      })
+    }, { immediate: true })
 
     const { onChange, open } = useFileDialog({
-      accept: unref(accept),
+      accept,
       multiple,
-      input: unref(inputRef)?.$el,
+      input: computed(() => unref(inputRef)?.$el),
       reset
     })
 

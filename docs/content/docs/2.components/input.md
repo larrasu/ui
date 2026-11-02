@@ -1,6 +1,8 @@
 ---
 description: An input element to enter text.
 category: form
+keywords:
+  - text field
 links:
   - label: GitHub
     icon: i-simple-icons-github
@@ -146,9 +148,11 @@ Use the `avatar` prop to show an [Avatar](/docs/components/avatar) inside the In
 prettier: true
 ignore:
   - placeholder
+  - avatar.loading
 props:
   avatar:
     src: 'https://github.com/nuxt.png'
+    loading: lazy
   size: md
   variant: outline
   placeholder: 'Search...'
@@ -274,7 +278,7 @@ name: 'input-kbd-example'
 ---
 ::
 
-::note{to="/composables/define-shortcuts"}
+::note{to="/docs/composables/define-shortcuts"}
 This example uses the `defineShortcuts` composable to focus the Input when the :kbd{value="/"} key is pressed.
 ::
 
@@ -314,11 +318,22 @@ It also provides validation and error handling when used within a **Form** compo
 
 ### Within a FieldGroup
 
-You can use the Input within a [FieldGroup](/components/field-group) component to group multiple elements together.
+You can use the Input within a [FieldGroup](/docs/components/field-group) component to group multiple elements together.
 
 ::component-example
 ---
 name: 'input-field-group-example'
+---
+::
+
+### As a phone number input
+
+You can use the Input within a [FieldGroup](/docs/components/field-group) component alongside a [SelectMenu](/docs/components/select-menu) to create a phone number input with country code selection.
+
+::component-example
+---
+collapse: true
+name: 'input-phone-number-example'
 ---
 ::
 

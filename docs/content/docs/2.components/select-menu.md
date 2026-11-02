@@ -2,6 +2,10 @@
 title: SelectMenu
 description: An advanced searchable select element.
 category: form
+keywords:
+  - combobox
+  - multi select
+  - filterable select
 links:
   - label: Combobox
     icon: i-custom-reka-ui
@@ -273,6 +277,10 @@ props:
 
 ::tip
 You can set the `search-input` prop to `false` to hide the search input.
+::
+
+::note
+Use `:search-input="{ autofocus: false }"` to prevent the search input from being focused when the menu opens, e.g. to avoid opening the virtual keyboard on touch devices.
 ::
 
 ### Content
@@ -615,6 +623,7 @@ ignore:
   - items
   - modelValue
   - class
+  - avatar.loading
 external:
   - items
   - modelValue
@@ -622,6 +631,7 @@ props:
   modelValue: 'Nuxt'
   avatar:
     src: 'https://github.com/nuxt.png'
+    loading: lazy
   items:
     - Nuxt
     - NuxtHub
@@ -744,23 +754,26 @@ externalTypes:
 props:
   modelValue: 'Apple'
   items:
-    - type: 'label'
-      label: 'Fruits'
-    - Apple
-    - Banana
-    - Blueberry
-    - Grapes
-    - Pineapple
-    - type: 'separator'
-    - type: 'label'
-      label: 'Vegetables'
-    - Aubergine
-    - Broccoli
-    - Carrot
-    - Courgette
-    - Leek
+    - - type: 'label'
+        label: 'Fruits'
+      - Apple
+      - Banana
+      - Blueberry
+      - Grapes
+      - Pineapple
+    - - type: 'label'
+        label: 'Vegetables'
+      - Aubergine
+      - Broccoli
+      - Carrot
+      - Courgette
+      - Leek
   class: 'w-48'
 ---
+::
+
+::note
+When using `label` items as group headings, pass an array of arrays so a label gets filtered out together with its group when searching.
 ::
 
 ### With icon in items
@@ -872,6 +885,10 @@ name: 'select-menu-fetch-example'
 ---
 ::
 
+::note
+This example uses `useLazyFetch` with `immediate: false` to only fetch data when the menu opens, avoiding unnecessary API calls on page load.
+::
+
 ### With ignore filter
 
 Set the `ignore-filter` prop to `true` to disable the internal search and use your own search logic.
@@ -884,7 +901,7 @@ name: 'select-menu-ignore-filter-example'
 ::
 
 ::note
-This example uses [`refDebounced`](https://vueuse.org/shared/refDebounced/#refdebounced) to debounce the API calls.
+This example uses [`refDebounced`](https://vueuse.org/shared/refDebounced/#refdebounced) to debounce the API calls. The fetch is deferred with `immediate: false` so no request is made until the menu opens.
 ::
 
 ### With filter fields
@@ -896,6 +913,10 @@ Use the `filter-fields` prop with an array of fields to filter on. Defaults to `
 collapse: true
 name: 'select-menu-filter-fields-example'
 ---
+::
+
+::note
+This example uses `useLazyFetch` with `immediate: false` to only fetch data when the menu opens, avoiding unnecessary API calls on page load.
 ::
 
 ### With virtualization :badge{label="4.1+" class="align-text-top"}
@@ -929,6 +950,10 @@ name: 'select-menu-infinite-scroll-example'
 ---
 ::
 
+::note
+This example uses `useLazyFetch` with `immediate: false` so data is only loaded as the user scrolls.
+::
+
 ### With full content width
 
 You can expand the content to the full width of its items by adding the `min-w-fit` class on the `ui.content` slot.
@@ -956,15 +981,19 @@ export default defineAppConfig({
 ```
 ::
 
-### As a CountryPicker
+### As a country picker
 
-This example demonstrates using the SelectMenu as a country picker with lazy loading - countries are only fetched when the menu is opened.
+You can use the SelectMenu as a country picker with lazy loading. Countries are only fetched when the menu is first opened.
 
 ::component-example
 ---
 collapse: true
 name: 'select-menu-countries-example'
 ---
+::
+
+::note
+This example uses `useLazyFetch` with `immediate: false` to only load countries when the menu is first opened.
 ::
 
 ## API

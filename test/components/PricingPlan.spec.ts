@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import PricingPlan from '../../src/runtime/components/PricingPlan.vue'
-import type { PricingPlanProps, PricingPlanSlots } from '../../src/runtime/components/PricingPlan.vue'
-import ComponentRender from '../component-render'
 import theme from '#build/ui/pricing-plan'
 
 describe('PricingPlan', () => {
@@ -30,7 +29,7 @@ describe('PricingPlan', () => {
     terms: 'Terms'
   }
 
-  it.each([
+  renderEach(PricingPlan, [
     // Props
     ['with title', { props: { title: 'Title' } }],
     ['with description', { props: { description: 'Description' } }],
@@ -50,6 +49,7 @@ describe('PricingPlan', () => {
     ...variants.map((variant: string) => [`with variant ${variant}`, { props: { ...props, variant } }]),
     ...orientations.map((orientation: string) => [`with orientation ${orientation}`, { props: { ...props, orientation } }]),
     ['with as', { props: { ...props, as: 'section' } }],
+    ['with as object', { props: { ...props, title: 'Title', as: { root: 'section', title: 'h3' } } }],
     ['with class', { props: { ...props, class: 'rounded-xl' } }],
     ['with ui', { props: { ...props, ui: { footer: 'gap-12' } } }],
     // Slots
@@ -66,10 +66,7 @@ describe('PricingPlan', () => {
     ['with header slot', { props, slots: { header: () => 'Header slot' } }],
     ['with body slot', { props, slots: { body: () => 'Body slot' } }],
     ['with footer slot', { props, slots: { footer: () => 'Footer slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: PricingPlanProps, slots?: Partial<PricingPlanSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, PricingPlan)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(PricingPlan, {

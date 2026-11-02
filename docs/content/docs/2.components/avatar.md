@@ -1,6 +1,9 @@
 ---
 description: An img element with fallback and Nuxt Image support.
 category: element
+keywords:
+  - profile picture
+  - user image
 links:
   - label: GitHub
     icon: i-simple-icons-github
@@ -9,7 +12,10 @@ links:
 
 ## Usage
 
-The Avatar uses the `<NuxtImg>` component when [`@nuxt/image`](https://github.com/nuxt/image) is installed, falling back to `img` otherwise.
+::framework-only
+#nuxt
+The Avatar uses the `<NuxtImg>` component when [`@nuxt/image`](/docs/getting-started/integrations/image) is installed, falling back to `img` otherwise.
+::
 
 ::component-code
 ---
@@ -20,13 +26,15 @@ props:
 ---
 ::
 
-
 ::note
 You can pass any property from the HTML `<img>` element such as `alt`, `loading`, etc.
 ::
 
-::tip
+::framework-only
+#nuxt
+:::tip
 To opt-out of `@nuxt/image`, use the `as` prop: `:as="{ img: 'img' }"`.
+:::
 ::
 
 ### Src
@@ -35,8 +43,11 @@ Use the `src` prop to set the image URL.
 
 ::component-code
 ---
+ignore:
+  - loading
 props:
   src: 'https://github.com/benjamincanac.png'
+  loading: lazy
 ---
 ::
 
@@ -48,9 +59,11 @@ Use the `size` prop to set the size of the Avatar.
 ---
 ignore:
   - src
+  - loading
 props:
   src: 'https://github.com/benjamincanac.png'
   size: xl
+  loading: lazy
 ---
 ::
 
@@ -98,6 +111,18 @@ props:
 The `alt` prop is passed to the `img` element as the `alt` attribute.
 ::
 
+### Color :badge{label="4.8+" class="align-text-top"}
+
+Use the `color` prop to change the color of the Avatar.
+
+::component-code
+---
+props:
+  color: primary
+  alt: 'Benjamin Canac'
+---
+::
+
 ### Chip
 
 Use the `chip` prop to display a chip around the Avatar.
@@ -107,9 +132,11 @@ Use the `chip` prop to display a chip around the Avatar.
 prettier: true
 ignore:
   - src
+  - loading
   - chip.inset
 props:
   src: 'https://github.com/benjamincanac.png'
+  loading: lazy
   chip:
     inset: true
 ---

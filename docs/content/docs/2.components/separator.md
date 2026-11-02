@@ -1,6 +1,10 @@
 ---
 description: Separates content horizontally or vertically.
 category: element
+keywords:
+  - divider
+  - hr
+  - horizontal rule
 links:
   - label: Separator
     icon: i-custom-reka-ui
@@ -47,6 +51,21 @@ props:
 ---
 ::
 
+### Position :badge{label="4.8+" class="align-text-top"}
+
+Use the `position` prop to change the position of the content of the Separator. Defaults to `center`.
+
+::component-code
+---
+ignore:
+  - class
+class: 'p-8'
+props:
+  position: start
+  label: 'Hello World'
+---
+::
+
 ### Icon
 
 Use the `icon` prop to display an icon in the middle of the Separator.
@@ -67,9 +86,12 @@ Use the `avatar` prop to display an avatar in the middle of the Separator.
 ---
 prettier: true
 class: 'p-8'
+ignore:
+  - avatar.loading
 props:
   avatar:
     src: 'https://github.com/nuxt.png'
+    loading: lazy
 ---
 ::
 

@@ -1,5 +1,4 @@
 ---
-title: Editor
 description: A rich text editor component based on TipTap with support for markdown, HTML, and JSON content types.
 category: editor
 links:
@@ -9,7 +8,6 @@ links:
   - label: GitHub
     icon: i-simple-icons-github
     to: https://github.com/nuxt/ui/blob/v4/src/runtime/components/Editor.vue
-navigation.badge: New
 ---
 
 ## Usage
@@ -234,6 +232,10 @@ const value = ref('<h1>Hello World</h1>\n')
 </template>
 ```
 
+::tip
+Set `starter-kit` to `false` for a plain text editor. It keeps the essential nodes (paragraph, text, history) and disables every formatting feature such as bold, italic, headings, lists, code, blockquote, links and horizontal rules.
+::
+
 ::callout{icon="i-custom-tiptap" to="https://tiptap.dev/docs/editor/extensions/functionality/starterkit" target="_blank"}
 Learn more about StarterKit extension in the TipTap documentation.
 ::
@@ -306,7 +308,7 @@ const items: EditorToolbarItem[] = [
 
 #### Custom handlers
 
-Use the `handlers` prop to extend or override the default handlers. Custom handlers are merged with the default handlers, allowing you to add new actions or modify existing behavior.
+Use the `handlers` prop to extend or override the default handlers. Custom handlers are merged with the default handlers, so you can add new actions or modify existing behavior.
 
 Each handler implements the `EditorHandler`{lang="ts-type"} interface:
 
@@ -364,6 +366,10 @@ Check out the image upload example for a complete implementation with custom han
 
 ::callout{icon="i-simple-icons-github" to="https://github.com/nuxt-ui-templates/editor" target="_blank"}
 Check out the source code of our **Editor template** on GitHub for a real-life example.
+::
+
+::tip{to="/templates/editor"}
+Follow the **How to Build a Notion-like Editor** guide to build a full app with slash commands, image uploads, AI completions and real-time collaboration.
 ::
 
 ### With toolbar
@@ -487,19 +493,19 @@ You need to install these dependencies first to use this example:
 ::code-group{sync="pm"}
 
 ```bash [pnpm]
-pnpm add ai @ai-sdk/gateway @ai-sdk/vue
+pnpm add ai @ai-sdk/vue
 ```
 
 ```bash [yarn]
-yarn add ai @ai-sdk/gateway @ai-sdk/vue
+yarn add ai @ai-sdk/vue
 ```
 
 ```bash [npm]
-npm install ai @ai-sdk/gateway @ai-sdk/vue
+npm install ai @ai-sdk/vue
 ```
 
 ```bash [bun]
-bun add ai @ai-sdk/gateway @ai-sdk/vue
+bun add ai @ai-sdk/vue
 ```
 
 ::
@@ -534,67 +540,84 @@ lang: 'ts'
 ::code-collapse
 
 ```ts [server/api/completion.post.ts]
-import { streamText } from 'ai'
-import { gateway } from '@ai-sdk/gateway'
+import { createError, defineEventHandler, readBody } from 'nuxt/server'
+import { streamText, createTextStreamResponse } from 'ai'
 
 export default defineEventHandler(async (event) => {
-  const { prompt, mode, language } = await readBody(event)
+  const { prompt, mode, language } = await readBody<{ prompt?: string, mode?: string, language?: string }>(event)
   if (!prompt) {
-    throw createError({ statusCode: 400, message: 'Prompt is required' })
+    throw createError({ status: 400, message: 'Prompt is required' })
+  }
+  if (prompt.length > 10_000) {
+    throw createError({ status: 413, message: 'Prompt is too long' })
   }
 
-  let system: string
+  let instructions: string
   let maxOutputTokens: number
 
   const preserveMarkdown = 'IMPORTANT: Preserve all markdown formatting (bold, italic, links, etc.) exactly as in the original.'
 
   switch (mode) {
     case 'fix':
-      system = `You are a writing assistant. Fix all spelling and grammar errors in the given text. ${preserveMarkdown} Only output the corrected text, nothing else.`
+      instructions = `You are a writing assistant. Fix all spelling and grammar errors in the given text. ${preserveMarkdown} Only output the corrected text, nothing else.`
       maxOutputTokens = 500
       break
     case 'extend':
-      system = `You are a writing assistant. Extend the given text with more details, examples, and explanations while maintaining the same style. ${preserveMarkdown} Only output the extended text, nothing else.`
+      instructions = `You are a writing assistant. Extend the given text with more details, examples, and explanations while maintaining the same style. ${preserveMarkdown} Only output the extended text, nothing else.`
       maxOutputTokens = 500
       break
     case 'reduce':
-      system = `You are a writing assistant. Make the given text more concise by removing unnecessary words while keeping the meaning. ${preserveMarkdown} Only output the reduced text, nothing else.`
+      instructions = `You are a writing assistant. Make the given text more concise by removing unnecessary words while keeping the meaning. ${preserveMarkdown} Only output the reduced text, nothing else.`
       maxOutputTokens = 300
       break
     case 'simplify':
-      system = `You are a writing assistant. Simplify the given text to make it easier to understand, using simpler words and shorter sentences. ${preserveMarkdown} Only output the simplified text, nothing else.`
+      instructions = `You are a writing assistant. Simplify the given text to make it easier to understand, using simpler words and shorter sentences. ${preserveMarkdown} Only output the simplified text, nothing else.`
       maxOutputTokens = 400
       break
     case 'summarize':
-      system = 'You are a writing assistant. Summarize the given text concisely while keeping the key points. Only output the summary, nothing else.'
+      instructions = 'You are a writing assistant. Summarize the given text concisely while keeping the key points. Only output the summary, nothing else.'
       maxOutputTokens = 200
       break
     case 'translate':
-      system = `You are a writing assistant. Translate the given text to ${language || 'English'}. ${preserveMarkdown} Only output the translated text, nothing else.`
+      instructions = `You are a writing assistant. Translate the given text to ${language || 'English'}. ${preserveMarkdown} Only output the translated text, nothing else.`
       maxOutputTokens = 500
       break
     case 'continue':
     default:
-      system = `You are a writing assistant providing inline autocompletions.
+      instructions = `You are a writing assistant providing inline autocompletions.
 CRITICAL RULES:
 - Output ONLY the NEW text that comes AFTER the user's input
 - NEVER repeat any words from the end of the user's text
 - Keep completions short (1 sentence max)
 - Match the tone and style of the existing text
-- ${preserveMarkdown}`
+- Output plain text only, never use markdown syntax`
       maxOutputTokens = 25
       break
   }
 
-  return streamText({
-    model: gateway('openai/gpt-4o-mini'),
-    system,
+  const result = streamText({
+    model: 'deepseek/deepseek-v4.1-flash',
+    instructions,
     prompt,
-    maxOutputTokens
-  }).toTextStreamResponse()
+    maxOutputTokens,
+    reasoning: 'none',
+    providerOptions: {
+      gateway: {
+        order: ['baseten'],
+        zeroDataRetention: true,
+        disallowPromptTraining: true
+      }
+    }
+  })
+
+  return createTextStreamResponse({ stream: result.textStream })
 })
 ```
 
+::
+
+::note
+The gateway options prefer Baseten and only use providers with zero data retention and no prompt training. Request-level zero data retention is only available on Vercel Pro and Enterprise plans.
 ::
 
 4. Use the composable in the Editor:
@@ -610,7 +633,7 @@ class: '!p-0'
 ::
 
 ::note
-The completion extension can be configured with `autoTrigger: true` to automatically suggest completions while typing (disabled by default). You can also manually trigger it with :kbd{value="meta"} :kbd{value="j" class="ms-px"}.
+The completion extension suggests completions while you type. Accept one with :kbd{value="tab"}, dismiss it with :kbd{value="escape"}, or set `autoTrigger: false` to turn it off.
 ::
 
 ::callout{icon="i-simple-icons-vercel" to="https://ai-sdk.dev/" target="_blank"}

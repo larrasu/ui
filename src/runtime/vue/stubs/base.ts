@@ -5,7 +5,7 @@ import { useColorMode as useColorModeVueUse } from '@vueuse/core'
 import appConfig from '#build/app.config'
 import type { NuxtApp } from '#app'
 
-export { useHead } from '@unhead/vue'
+export { injectHead, useHead } from '@unhead/vue'
 
 export { useAppConfig } from '../composables/useAppConfig'
 export { defineShortcuts } from '../../composables/defineShortcuts'
@@ -77,6 +77,15 @@ export function useRuntimeHook(name: string, fn: (...args: any[]) => void): void
   const unregister = nuxtApp.hook(name, fn)
 
   onScopeDispose(unregister)
+}
+
+export function useRuntimeConfig() {
+  return {
+    app: {
+      baseURL: '/'
+    },
+    public: {}
+  }
 }
 
 export function defineNuxtPlugin(plugin: (nuxtApp: NuxtApp) => void) {

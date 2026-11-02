@@ -1,6 +1,6 @@
 ---
 title: ColorModeSelect
-description: 'A Select to switch between system, dark & light mode.'
+description: 'A Select to switch between system, dark and light mode.'
 category: color-mode
 links:
   - label: SelectMenu
@@ -27,13 +27,13 @@ The ColorModeSelect component extends the [SelectMenu](/docs/components/select-m
 
 Use the `app.config.ts` to customize the icon with the `ui.icons` property:
 
-```ts [app.config.ts]
+```ts [app/app.config.ts]
 export default defineAppConfig({
   ui: {
     icons: {
-      system: 'i-ph-desktop',
-      light: 'i-ph-sun',
-      dark: 'i-ph-moon'
+      system: 'i-lucide-laptop',
+      light: 'i-lucide-sun-medium',
+      dark: 'i-lucide-moon-star'
     }
   }
 })
@@ -56,8 +56,8 @@ export default defineConfig({
     ui({
       ui: {
         icons: {
-          light: 'i-ph-sun',
-          dark: 'i-ph-moon'
+          light: 'i-lucide-sun-medium',
+          dark: 'i-lucide-moon-star'
         }
       }
     })

@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { Chat } from '@ai-sdk/vue'
-import type { UIMessage } from 'ai'
+import { isTextUIPart } from 'ai'
+import { useChat } from '@ai-sdk/vue'
+import { isPartStreaming } from '@nuxt/ui/utils/ai'
+import { Markdown } from '@comark/vue'
+import shiki from '@comark/vue/plugins/shiki'
+import security from '@comark/vue/plugins/security'
 
-const messages: UIMessage[] = []
+const plugins = [shiki(), security({ blockedTags: ['script', 'style', 'iframe', 'object', 'embed', 'form'] })]
+
 const input = ref('')
+
+const { messages, status, error, sendMessage, regenerate } = useChat()
 
 const groups = computed(() => [{
   id: 'ai',
@@ -17,13 +24,13 @@ const groups = computed(() => [{
       ai.value = true
 
       if (searchTerm.value) {
-        messages.push({
+        messages.value = [...messages.value, {
           id: '1',
           role: 'user',
           parts: [{ type: 'text', text: searchTerm.value }]
-        })
+        }]
 
-        chat.regenerate()
+        regenerate()
       }
     }
   }]
@@ -32,12 +39,10 @@ const groups = computed(() => [{
 const ai = ref(false)
 const searchTerm = ref('')
 
-const chat = new Chat({
-  messages
-})
-
 function onSubmit() {
-  chat.sendMessage({ text: input.value })
+  if (!input.value.trim()) return
+
+  sendMessage({ text: input.value })
 
   input.value = ''
 }
@@ -47,44 +52,59 @@ function onClose(e: Event) {
 
   ai.value = false
 }
+
+const ui = {
+  prose: {
+    p: { base: 'my-2 leading-6' },
+    li: { base: 'my-0.5 leading-6' },
+    ul: { base: 'my-2' },
+    ol: { base: 'my-2' },
+    h1: { base: 'text-xl my-2' },
+    h2: { base: 'text-lg my-2' },
+    h3: { base: 'text-base my-2' },
+    h4: { base: 'text-sm my-2' },
+    pre: { root: 'my-2' },
+    table: { root: 'my-2' },
+    hr: { base: 'my-2' }
+  }
+}
 </script>
 
 <template>
   <UContentSearch v-model:search-term="searchTerm" open :groups="groups">
     <template v-if="ai" #content>
-      <UChatPalette>
-        <UChatMessages
-          :messages="chat.messages"
-          :status="chat.status"
-          :user="{ side: 'left', variant: 'naked', avatar: { src: 'https://github.com/benjamincanac.png' } }"
-          :assistant="{ icon: 'i-lucide-bot' }"
-        >
-          <template #content="{ message }">
-            <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
-              <MDC
-                v-if="part.type === 'text' && message.role === 'assistant'"
+      <UTheme :ui="ui">
+        <UChatPalette>
+          <UChatMessages
+            :messages="messages"
+            :status="status"
+            :user="{ side: 'left', variant: 'naked', avatar: { src: 'https://github.com/benjamincanac.png', loading: 'lazy' as const }, ui: { text: 'leading-6' } }"
+            :assistant="{ icon: 'i-lucide-bot' }"
+          >
+            <template #part="{ part, message, streaming }">
+              <Markdown
+                v-if="isTextUIPart(part) && message.role === 'assistant'"
                 :value="part.text"
-                :cache-key="`${message.id}-${index}`"
-                class="[&_.my-5]:my-2.5 *:first:!mt-0 *:last:!mb-0 [&_.leading-7]:!leading-6"
+                :streaming="isPartStreaming(part, streaming)"
+                :plugins="plugins"
+                class="*:first:mt-0 *:last:mb-0"
               />
-              <p v-else-if="part.type === 'text' && message.role === 'user'" class="whitespace-pre-wrap">
-                {{ part.text }}
-              </p>
             </template>
-          </template>
-        </UChatMessages>
+          </UChatMessages>
 
-        <template #prompt>
-          <UChatPrompt
-            v-model="input"
-            icon="i-lucide-search"
-            variant="naked"
-            :error="chat.error"
-            @submit="onSubmit"
-            @close="onClose"
-          />
-        </template>
-      </UChatPalette>
+          <template #prompt>
+            <UChatPrompt
+              v-model="input"
+              icon="i-lucide-search"
+              variant="naked"
+              :status="status"
+              :error="error"
+              @submit="onSubmit"
+              @close="onClose"
+            />
+          </template>
+        </UChatPalette>
+      </UTheme>
     </template>
   </UContentSearch>
 </template>

@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, test } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { mount } from '@vue/test-utils'
+import { renderEach } from '../component-render'
+import { flushPromises, mount } from '@vue/test-utils'
+import { h } from 'vue'
+import Avatar from '../../src/runtime/components/Avatar.vue'
 import FileUpload from '../../src/runtime/components/FileUpload.vue'
-import type { FileUploadProps, FileUploadSlots } from '../../src/runtime/components/FileUpload.vue'
+import type { FileUploadItem } from '../../src/runtime/components/FileUpload.vue'
 import type { FormInputEvents } from '../../src/module'
-import ComponentRender from '../component-render'
 import { renderForm } from '../utils/form'
+import { expectEmitPayloadType, expectSlotProps } from '../utils/types'
 import theme from '#build/ui/file-upload'
+
+interface CustomFileUploadItem extends FileUploadItem {
+  id: string
+}
 
 // Mock URL.createObjectURL to return deterministic blob URLs
 URL.createObjectURL = vi.fn((file: File | Blob) => {
@@ -32,6 +39,48 @@ async function setFilesOnInput(input: any, files: File[]) {
 }
 
 describe('FileUpload', () => {
+  it('preserves row state when file items are copied and reordered', async () => {
+    const first = { name: 'first.png', progress: 0 }
+    const second = { name: 'second.png', progress: 0 }
+    const wrapper = mount(FileUpload, {
+      props: { modelValue: [first, second], multiple: true },
+      slots: { file: () => h('input', { 'data-test': 'file-state' }) }
+    })
+
+    const inputs = wrapper.findAll<HTMLInputElement>('[data-test="file-state"]')
+    await inputs[0]!.setValue('first file')
+    await inputs[1]!.setValue('second file')
+
+    await wrapper.setProps({ modelValue: [{ ...second, progress: 50 }, { ...first, progress: 50 }] })
+
+    const updatedInputs = wrapper.findAll<HTMLInputElement>('[data-test="file-state"]')
+    expect(updatedInputs.map(input => input.element.value)).toEqual(['second file', 'first file'])
+    expect(updatedInputs[0]!.element).toBe(inputs[1]!.element)
+    expect(updatedInputs[1]!.element).toBe(inputs[0]!.element)
+  })
+
+  test('preserves native file types by default', () => {
+    expectEmitPayloadType('update:modelValue', () => FileUpload({})).toEqualTypeOf<[File | null | undefined]>()
+    expectEmitPayloadType('update:modelValue', () => FileUpload({ multiple: true })).toEqualTypeOf<[File[] | null | undefined]>()
+    expectSlotProps('file', () => FileUpload({})).toEqualTypeOf<{
+      file: File
+      index: number
+      removeFile: (index?: number) => void
+    }>()
+  })
+
+  test('infers custom item types alongside native files', () => {
+    const item: CustomFileUploadItem = { name: 'existing.png', id: 'file-1' }
+
+    expectEmitPayloadType('update:modelValue', () => FileUpload({ modelValue: item })).toEqualTypeOf<[CustomFileUploadItem | File | null | undefined]>()
+    expectEmitPayloadType('update:modelValue', () => FileUpload({ modelValue: [item], multiple: true })).toEqualTypeOf<[(CustomFileUploadItem | File)[] | null | undefined]>()
+    expectSlotProps('file', () => FileUpload({ modelValue: item })).toEqualTypeOf<{
+      file: CustomFileUploadItem | File
+      index: number
+      removeFile: (index?: number) => void
+    }>()
+  })
+
   const sizes = Object.keys(theme.variants.size) as any
   const variants = Object.keys(theme.variants.variant) as any
   const layouts = Object.keys(theme.variants.layout) as any
@@ -41,7 +90,7 @@ describe('FileUpload', () => {
 
   const props = { modelValue }
 
-  it.each([
+  renderEach(FileUpload, [
     // Props
     ['with modelValue', { props }],
     ['with id', { props: { id: 'id' } }],
@@ -57,8 +106,11 @@ describe('FileUpload', () => {
     ...positions.map((position: string) => [`with position ${position} multiple`, { props: { ...props, position, multiple: true } }]),
     ...sizes.map((size: string) => [`with size ${size}`, { props: { ...props, size } }]),
     ...sizes.map((size: string) => [`with size ${size} variant button`, { props: { ...props, size, variant: 'button' } }]),
+    ['with highlight', { props: { highlight: true } }],
+    ['with highlight neutral', { props: { highlight: true, color: 'neutral' } }],
     ['with required', { props: { required: true } }],
     ['with disabled', { props: { disabled: true } }],
+    ['with disabled variant button', { props: { disabled: true, variant: 'button' } }],
     ['with accept', { props: { accept: 'image/*' } }],
     ['with multiple', { props: { ...props, multiple: true } }],
     ['without dropzone', { props: { dropzone: false } }],
@@ -88,9 +140,22 @@ describe('FileUpload', () => {
     ['with file-name slot', { props, slots: { 'file-name': () => 'File name slot' } }],
     ['with file-size slot', { props, slots: { 'file-size': () => 'File size slot' } }],
     ['with file-trailing slot', { props, slots: { 'file-trailing': () => 'File trailing slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: FileUploadProps, slots?: Partial<FileUploadSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, FileUpload)
-    expect(html).toMatchSnapshot()
+  ])
+
+  it('hides the icon when icon is false', async () => {
+    const withIcon = await mountSuspended(FileUpload)
+    expect(withIcon.find('[data-slot="icon"]').exists()).toBe(true)
+
+    const withoutIcon = await mountSuspended(FileUpload, { props: { icon: false } })
+    expect(withoutIcon.find('[data-slot="icon"]').exists()).toBe(false)
+  })
+
+  it('hides the icon when icon is false with variant button', async () => {
+    const withIcon = await mountSuspended(FileUpload, { props: { variant: 'button' } })
+    expect(withIcon.find('[data-slot="icon"]').exists()).toBe(true)
+
+    const withoutIcon = await mountSuspended(FileUpload, { props: { variant: 'button', icon: false } })
+    expect(withoutIcon.find('[data-slot="icon"]').exists()).toBe(false)
   })
 
   it('passes accessibility tests', async () => {
@@ -106,6 +171,149 @@ describe('FileUpload', () => {
     })
 
     expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+
+  it('reactively changes multiple and accept attributes', async () => {
+    const wrapper = await mountSuspended(FileUpload, {
+      props: {
+        multiple: false,
+        accept: 'image/*'
+      }
+    })
+
+    const input = wrapper.find('input[type="file"]')
+
+    expect(input.attributes('accept')).toBe('image/*')
+    expect(input.attributes('multiple')).toBeUndefined()
+
+    await wrapper.setProps({ multiple: true, accept: 'application/pdf' })
+
+    expect(input.attributes('accept')).toBe('application/pdf')
+    expect(input.attributes('multiple')).toBe('')
+  })
+
+  it('renders a custom file item', async () => {
+    const item: FileUploadItem = {
+      name: 'avatar.png',
+      avatar: {
+        src: 'https://example.com/avatar.png',
+        alt: 'User avatar'
+      }
+    }
+    const wrapper = await mountSuspended(FileUpload, {
+      props: { modelValue: item }
+    })
+
+    expect(wrapper.get('[data-slot="fileName"]').text()).toBe(item.name)
+    expect(wrapper.get('[data-slot="fileLeadingAvatar"] img').attributes()).toMatchObject({
+      src: item.avatar?.src,
+      alt: item.avatar?.alt
+    })
+  })
+
+  it('uses the file name as preview alt text', async () => {
+    const wrapper = await mountSuspended(FileUpload, {
+      props: {
+        modelValue: {
+          name: 'avatar.png',
+          avatar: { src: 'https://example.com/avatar.png' }
+        }
+      }
+    })
+
+    expect(wrapper.get('[data-slot="fileLeadingAvatar"] img').attributes('alt')).toBe('avatar.png')
+  })
+
+  it('hides custom item previews when fileImage is false', async () => {
+    const wrapper = await mountSuspended(FileUpload, {
+      props: {
+        modelValue: {
+          name: 'avatar.png',
+          avatar: {
+            src: 'https://example.com/avatar.png',
+            icon: 'i-lucide-user',
+            text: 'UA'
+          }
+        },
+        fileImage: false,
+        fileIcon: 'i-lucide-file-text'
+      }
+    })
+
+    const fileAvatar = wrapper.findAllComponents(Avatar).find(component => component.attributes('data-slot') === 'fileLeadingAvatar')
+
+    expect(wrapper.find('[data-slot="fileLeadingAvatar"] img').exists()).toBe(false)
+    expect(fileAvatar?.props('icon')).toBe('i-lucide-file-text')
+    expect(wrapper.text()).not.toContain('UA')
+  })
+
+  it('preserves custom file items when adding files', async () => {
+    const item: CustomFileUploadItem = {
+      id: 'file-1',
+      name: 'existing.png',
+      avatar: { src: 'https://example.com/existing.png' }
+    }
+    const wrapper = mount(FileUpload, {
+      props: {
+        modelValue: [item],
+        multiple: true
+      }
+    })
+    const file = new File(['foo'], 'new.txt', { type: 'text/plain' })
+
+    await setFilesOnInput(wrapper.find('input'), [file])
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toEqual([item, file])
+  })
+
+  describe('dropzone', () => {
+    const file = new File(['foo'], 'file.txt', { type: 'text/plain' })
+
+    async function drag(wrapper: Awaited<ReturnType<typeof mountSuspended>>, types: string[]) {
+      const data = new DataTransfer()
+      data.items.add(file)
+      const base = wrapper.find('[data-slot="base"]').element
+
+      for (const type of types) {
+        const event = new Event(type, { bubbles: true, cancelable: true })
+        Object.defineProperty(event, 'dataTransfer', { value: data })
+        base.dispatchEvent(event)
+      }
+      await flushPromises()
+    }
+
+    it('accepts drops once dropzone is enabled', async () => {
+      const wrapper = await mountSuspended(FileUpload, { props: { dropzone: false } })
+
+      await wrapper.setProps({ dropzone: true })
+      await drag(wrapper, ['dragenter', 'drop'])
+
+      expect(wrapper.emitted('update:modelValue')).toHaveLength(1)
+    })
+
+    it('ignores drops once dropzone is disabled', async () => {
+      const wrapper = await mountSuspended(FileUpload, { props: { dropzone: true } })
+
+      await wrapper.setProps({ dropzone: false })
+      await drag(wrapper, ['dragenter', 'drop'])
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('clears the drag state when dropzone is disabled mid-drag', async () => {
+      const wrapper = await mountSuspended(FileUpload, { props: { dropzone: true } })
+      const base = wrapper.find('[data-slot="base"]')
+
+      await drag(wrapper, ['dragenter'])
+      expect(base.attributes('data-dragging')).toBe('true')
+
+      await wrapper.setProps({ dropzone: false })
+      expect(base.attributes('data-dragging')).toBe('false')
+
+      await wrapper.setProps({ dropzone: true })
+      await drag(wrapper, ['dragenter', 'dragleave'])
+      expect(base.attributes('data-dragging')).toBe('false')
+    })
   })
 
   describe('emits', () => {
@@ -131,6 +339,16 @@ describe('FileUpload', () => {
       const file2 = new File(['bar'], 'file2.txt', { type: 'text/plain' })
       await setFilesOnInput(input, [file1, file2])
       expect(wrapper.emitted('change')).toBeTruthy()
+    })
+
+    test('reject event', async () => {
+      const wrapper = mount(FileUpload, { props: { accept: 'image/*' }, attachTo: document.body })
+      const file = new File(['foo'], 'file.pdf', { type: 'application/pdf' })
+      const dataTransfer = { items: [{ kind: 'file', type: file.type }], files: [file] }
+      await wrapper.find('[data-slot="base"]').trigger('drop', { dataTransfer })
+      expect(wrapper.emitted('reject')?.[0]).toEqual([[file]])
+      expect(wrapper.emitted('update:modelValue')).toBeFalsy()
+      wrapper.unmount()
     })
   })
 

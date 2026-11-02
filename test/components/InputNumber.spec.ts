@@ -2,11 +2,10 @@ import { reactive } from 'vue'
 import { describe, it, expect, test } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import { flushPromises } from '@vue/test-utils'
 import InputNumber from '../../src/runtime/components/InputNumber.vue'
-import type { InputNumberProps, InputNumberSlots } from '../../src/runtime/components/InputNumber.vue'
 import type { FormInputEvents } from '../../src/module'
-import ComponentRender from '../component-render'
 import { renderForm } from '../utils/form'
 import theme from '#build/ui/input-number'
 
@@ -14,7 +13,7 @@ describe('InputNumber', () => {
   const sizes = Object.keys(theme.variants.size) as any
   const variants = Object.keys(theme.variants.variant) as any
 
-  it.each([
+  renderEach(InputNumber, [
     // Props
     ['with name', { props: { name: 'name' } }],
     ['with placeholder', { props: { placeholder: 'Number...' } }],
@@ -31,7 +30,9 @@ describe('InputNumber', () => {
     ['without increment and decrement vertical', { props: { increment: false, decrement: false, orientation: 'vertical' } }],
     ...sizes.map((size: string) => [`with size ${size}`, { props: { size } }]),
     ...variants.map((variant: string) => [`with primary variant ${variant}`, { props: { variant } }]),
+    ...variants.map((variant: string) => [`with primary variant ${variant} highlight`, { props: { variant, highlight: true } }]),
     ...variants.map((variant: string) => [`with neutral variant ${variant}`, { props: { variant, color: 'neutral' } }]),
+    ...variants.map((variant: string) => [`with neutral variant ${variant} highlight`, { props: { variant, color: 'neutral', highlight: true } }]),
     ['with ariaLabel', { attrs: { 'aria-label': 'Aria label' } }],
     ['with .optional modifier', { props: { modelModifiers: { optional: true } } }, { input: '', expected: undefined }],
     ['with as', { props: { as: 'section' } }],
@@ -40,9 +41,26 @@ describe('InputNumber', () => {
     // Slots
     ['with increment slot', { slots: { increment: () => '+' } }],
     ['with decrement slot', { slots: { decrement: () => '-' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: InputNumberProps, slots?: Partial<InputNumberSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, InputNumber)
-    expect(html).toMatchSnapshot()
+  ])
+
+  it.each(['increment', 'decrement'])('starts from startingValue on the first %s of an empty field', async (slot) => {
+    const wrapper = await mountSuspended(InputNumber, { props: { startingValue: 18 } })
+
+    const button = wrapper.find(`[data-slot="${slot}"] button`)
+    await button.trigger('pointerdown', { button: 0, pointerType: 'mouse' })
+    await button.trigger('pointerup', { button: 0, pointerType: 'mouse' })
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[18]])
+  })
+
+  it('keeps an out of range typed value with allowInvalid', async () => {
+    const wrapper = await mountSuspended(InputNumber, { props: { max: 10, allowInvalid: true } })
+
+    const input = wrapper.find('input')
+    await input.setValue('15')
+    await input.trigger('blur')
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[15]])
   })
 
   it('passes accessibility tests', async () => {
@@ -65,6 +83,71 @@ describe('InputNumber', () => {
       await input.setValue(1)
       expect(wrapper.emitted()).toMatchObject({ 'update:modelValue': [[1]] })
       expect(1).toBe(1)
+    })
+
+    test('increments uncontrolled defaultValue without v-model', async () => {
+      const wrapper = await mountSuspended(InputNumber, { props: { defaultValue: 5 }, attachTo: document.body })
+      const increment = wrapper.find('[data-slot="increment"] button')
+
+      await increment.trigger('pointerdown')
+      await increment.trigger('pointerup')
+      await wrapper.find('input').trigger('blur')
+      await flushPromises()
+
+      expect(wrapper.emitted('update:modelValue')).toEqual([[6]])
+      expect((wrapper.find('input').element as HTMLInputElement).value).toBe('6')
+
+      wrapper.unmount()
+    })
+
+    test('emits once when controlled and blurred', async () => {
+      const wrapper = await mountSuspended(InputNumber, {
+        attachTo: document.body,
+        props: {
+          'modelValue': 5,
+          'onUpdate:modelValue': (value: number | null | undefined) => wrapper.setProps({ modelValue: value })
+        }
+      })
+      const increment = wrapper.find('[data-slot="increment"] button')
+
+      await increment.trigger('pointerdown')
+      await increment.trigger('pointerup')
+      await flushPromises()
+      await wrapper.find('input').trigger('blur')
+      await flushPromises()
+
+      expect(wrapper.emitted('update:modelValue')).toEqual([[6]])
+      expect(wrapper.emitted('change')).toHaveLength(1)
+
+      wrapper.unmount()
+    })
+
+    test('emits undefined once when cleared with .optional modifier', async () => {
+      const wrapper = await mountSuspended(InputNumber, {
+        props: {
+          'modelValue': 5,
+          'modelModifiers': { optional: true },
+          'onUpdate:modelValue': (value: number | null | undefined) => wrapper.setProps({ modelValue: value })
+        }
+      })
+      const input = wrapper.find('input')
+
+      await input.setValue('')
+      await input.trigger('blur')
+      await flushPromises()
+      await input.trigger('blur')
+      await flushPromises()
+
+      expect(wrapper.emitted('update:modelValue')).toEqual([[undefined]])
+    })
+
+    test('does not emit when blurred with a null modelValue', async () => {
+      const wrapper = await mountSuspended(InputNumber, { props: { modelValue: null } })
+
+      await wrapper.find('input').trigger('blur')
+      await flushPromises()
+
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
     })
 
     test('change event', async () => {

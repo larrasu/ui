@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import BlogPost from '../../src/runtime/components/BlogPost.vue'
-import type { BlogPostProps, BlogPostSlots } from '../../src/runtime/components/BlogPost.vue'
-import ComponentRender from '../component-render'
 import theme from '#build/ui/blog-post'
 
 describe('BlogPost', () => {
@@ -32,7 +31,7 @@ describe('BlogPost', () => {
     badge: 'Badge'
   }
 
-  it.each([
+  renderEach(BlogPost, [
     // Props
     ['with title', { props: { title: 'Title' } }],
     ['with description', { props: { description: 'Description' } }],
@@ -41,12 +40,13 @@ describe('BlogPost', () => {
     ['with to & image', { props: { to: 'https://github.com/benjamincanac', image: 'https://picsum.photos/640/360' } }],
     ['with date', { props: { date: '2024-01-01' } }],
     ['with badge', { props: { badge: 'Badge' } }],
-    ['with badge object', { props: { badge: { label: 'Badge', color: 'primary' as const } } }],
+    ['with badge object', { props: { badge: { label: 'Badge', color: 'primary' } } }],
     ['with author', { props: { authors: [author1] } }],
     ['with authors', { props: { authors: [author1, author2] } }],
     ...variants.map((variant: string) => [`with variant ${variant}`, { props: { ...props, variant } }]),
     ...orientations.map((orientation: string) => [`with orientation ${orientation}`, { props: { ...props, orientation } }]),
     ['with as', { props: { ...props, as: 'section' } }],
+    ['with as object', { props: { ...props, as: { root: 'section', title: 'h3' } } }],
     ['with class', { props: { ...props, class: 'absolute' } }],
     ['with ui', { props: { ...props, ui: { wrapper: 'items-center' } } }],
     // Slots
@@ -58,10 +58,7 @@ describe('BlogPost', () => {
     ['with header slot', { props, slots: { header: () => 'Header slot' } }],
     ['with body slot', { props, slots: { body: () => 'Body slot' } }],
     ['with footer slot', { props, slots: { footer: () => 'Footer slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: BlogPostProps, slots?: Partial<BlogPostSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, BlogPost)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(BlogPost, {
@@ -72,5 +69,23 @@ describe('BlogPost', () => {
     })
 
     expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+
+  it('forwards attrs to root when `to` prop is absent', async () => {
+    const wrapper = await mountSuspended(BlogPost, {
+      props: { title: 'Title' },
+      attrs: { 'aria-label': 'test-label', 'data-testid': 'test-id' }
+    })
+    expect(wrapper.attributes('aria-label')).toBe('test-label')
+    expect(wrapper.attributes('data-testid')).toBe('test-id')
+  })
+
+  it('forwards attrs to link when `to` prop is set', async () => {
+    const wrapper = await mountSuspended(BlogPost, {
+      props: { title: 'Title', to: 'https://github.com/benjamincanac' },
+      attrs: { 'aria-label': 'test-label' }
+    })
+    expect(wrapper.attributes('aria-label')).toBeUndefined()
+    expect(wrapper.find('a').attributes('aria-label')).toBe('test-label')
   })
 })

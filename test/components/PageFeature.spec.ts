@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import PageFeature from '../../src/runtime/components/PageFeature.vue'
-import type { PageFeatureProps, PageFeatureSlots } from '../../src/runtime/components/PageFeature.vue'
-import ComponentRender from '../component-render'
 import theme from '#build/ui/page-feature'
 
 describe('PageFeature', () => {
@@ -15,9 +14,10 @@ describe('PageFeature', () => {
     icon: 'i-lucide-house'
   }
 
-  it.each([
+  renderEach(PageFeature, [
     // Props
     ['with as', { props: { as: 'section' } }],
+    ['with as object', { props: { title: 'Title', as: { root: 'section', title: 'h3' } } }],
     ['with icon', { props: { icon: 'i-lucide-house' } }],
     ['with title', { props: { title: 'Title' } }],
     ['with description', { props: { description: 'Description' } }],
@@ -30,10 +30,7 @@ describe('PageFeature', () => {
     ['with title slot', { props, slots: { title: () => 'Title slot' } }],
     ['with description slot', { props, slots: { description: () => 'Description slot' } }],
     ['with default slot', { props, slots: { default: () => 'Default slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: PageFeatureProps, slots?: Partial<PageFeatureSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, PageFeature)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(PageFeature, {
@@ -46,5 +43,23 @@ describe('PageFeature', () => {
     })
 
     expect(await axe(wrapper.element)).toHaveNoViolations()
+  })
+
+  it('forwards attrs to root when `to` prop is absent', async () => {
+    const wrapper = await mountSuspended(PageFeature, {
+      props: { title: 'Title' },
+      attrs: { 'aria-label': 'test-label', 'data-testid': 'test-id' }
+    })
+    expect(wrapper.attributes('aria-label')).toBe('test-label')
+    expect(wrapper.attributes('data-testid')).toBe('test-id')
+  })
+
+  it('forwards attrs to link when `to` prop is set', async () => {
+    const wrapper = await mountSuspended(PageFeature, {
+      props: { title: 'Title', to: 'https://github.com/benjamincanac' },
+      attrs: { 'aria-label': 'test-label' }
+    })
+    expect(wrapper.attributes('aria-label')).toBeUndefined()
+    expect(wrapper.find('a').attributes('aria-label')).toBe('test-label')
   })
 })

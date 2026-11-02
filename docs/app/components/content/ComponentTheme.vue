@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { markRaw } from 'vue'
 import json5 from 'json5'
 import { camelCase } from 'scule'
-import { hash } from 'ohash'
 import * as theme from '#build/ui'
 
 const props = defineProps<{
@@ -12,7 +10,6 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
-const { framework } = useFrameworks()
 
 const name = props.slug ?? route.path.split('/').pop() ?? ''
 const camelName = camelCase(name)
@@ -82,8 +79,7 @@ const themeLink = computed(() => {
   return `https://github.com/nuxt/ui/blob/v4/src/theme/${slug}.ts`
 })
 
-const { data: ast } = await useAsyncData(`component-theme-${camelName}-${hash({ props })}`, async () => {
-  const md = `
+const markdown = computed(() => `
 ::code-collapse{class="nuxt-only"}
 
 \`\`\`ts [app.config.ts]
@@ -118,12 +114,9 @@ ${strippedCompoundVariants.value
 Some colors in \`compoundVariants\` are omitted for readability. Check out the source code on GitHub.
 ::`
   : ''}
-`
-
-  return markRaw(await parseMarkdown(md))
-}, { watch: [framework] })
+`)
 </script>
 
 <template>
-  <MDCRenderer v-if="ast" :body="ast.body" :data="ast.data" />
+  <DocsMarkdown :value="markdown" />
 </template>

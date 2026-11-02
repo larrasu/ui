@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/91ceab67-89ce-4ef4-8678-4402a92baca5">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/51526d6d-e5ec-41b4-aa37-242dec1cdb27">
-  <img alt="Nuxt UI" src="https://github.com/user-attachments/assets/51526d6d-e5ec-41b4-aa37-242dec1cdb27">
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/banner-light.png">
+  <img alt="Nuxt UI" width="900" src=".github/assets/banner-light.png">
 </picture>
 
 # Nuxt UI
@@ -11,10 +11,10 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Nuxt UI harnesses the combined strengths of [Reka UI](https://reka-ui.com/), [Tailwind CSS](https://tailwindcss.com/), and [Tailwind Variants](https://www.tailwind-variants.org/) to offer developers an unparalleled set of tools for creating sophisticated, accessible, and highly performant user interfaces.
+Nuxt UI is a library of accessible, typed [Vue](https://vuejs.org) components built on [Reka UI](https://reka-ui.com/), [Tailwind CSS](https://tailwindcss.com/) and [Tailwind Variants](https://www.tailwind-variants.org/). It works as a module in [Nuxt](https://nuxt.com) and as a [Vite](https://vite.dev) plugin in plain Vue apps.
 
 > [!NOTE]
-> You are on the `v4` branch, check out the [v3 branch](https://github.com/nuxt/ui/tree/v3) for Nuxt UI v3 or [v2 branch](https://github.com/nuxt/ui/tree/v2) for Nuxt UI v2.
+> You are on the `v4` branch. Check out the [v3 branch](https://github.com/nuxt/ui/tree/v3) for Nuxt UI v3 or the [v2 branch](https://github.com/nuxt/ui/tree/v2) for Nuxt UI v2.
 
 ## Documentation
 
@@ -22,17 +22,18 @@ Visit https://ui.nuxt.com to explore the documentation.
 
 ## Templates
 
-Kickstart your project with one of our ready-to-use Nuxt UI templates or follow the [Installation Guide](https://ui.nuxt.com/getting-started/installation/nuxt). Explore all available templates on the [official templates page](https://ui.nuxt.com/templates).
+Start your project from one of the Nuxt UI templates below, or browse them all on the [templates page](https://ui.nuxt.com/templates).
 
-- [Starter](https://github.com/nuxt-ui-templates/starter) — A minimal template to get started with Nuxt UI.
-- [Landing](https://github.com/nuxt-ui-templates/landing) — A modern landing page template powered by Nuxt Content.
-- [Docs](https://github.com/nuxt-ui-templates/docs) — A documentation template powered by Nuxt Content.
-- [SaaS](https://github.com/nuxt-ui-templates/saas) — A SaaS template with landing, pricing, docs and blog powered by Nuxt Content.
-- [Dashboard](https://github.com/nuxt-ui-templates/dashboard) — A dashboard template with multi-column layout.
-- [Chat](https://github.com/nuxt-ui-templates/chat) — An AI chatbot template with GitHub authentication and persistent chat history powered by Vercel AI SDK.
-- [Portfolio](https://github.com/nuxt-ui-templates/portfolio) — A sleek portfolio template to showcase your work, skills and blog powered by Nuxt Content.
-- [Changelog](https://github.com/nuxt-ui-templates/changelog) — A changelog template to display your repository releases notes from GitHub powered by Nuxt MDC.
-- [Editor](https://github.com/nuxt-ui-templates/editor) — A rich text editor template powered by TipTap with support for markdown, HTML, and JSON content types.
+- [Starter](https://github.com/nuxt-ui-templates/starter): A minimal template to get started with Nuxt UI.
+- [Landing](https://github.com/nuxt-ui-templates/landing): A landing page template powered by Nuxt Content.
+- [Docs](https://github.com/nuxt-ui-templates/docs): A documentation template powered by Nuxt Content.
+- [SaaS](https://github.com/nuxt-ui-templates/saas): A SaaS template with landing, pricing, docs and blog powered by Nuxt Content.
+- [Dashboard](https://github.com/nuxt-ui-templates/dashboard): A dashboard template with multi-column layout.
+- [Chat](https://github.com/nuxt-ui-templates/chat): An AI chatbot template with GitHub authentication and persistent chat history powered by Vercel AI SDK.
+- [Portfolio](https://github.com/nuxt-ui-templates/portfolio): A portfolio template to showcase your work, skills and blog powered by Nuxt Content.
+- [Changelog](https://github.com/nuxt-ui-templates/changelog): A changelog template to display your repository release notes from GitHub powered by Nuxt MDC.
+- [Editor](https://github.com/nuxt-ui-templates/editor): A rich text editor template powered by TipTap with support for markdown, HTML, and JSON content types.
+- [Calendar](https://github.com/nuxt-ui-templates/calendar): An Apple Calendar inspired template with day, week and month views, drag and drop and optimistic updates.
 
 ## Installation
 
@@ -58,13 +59,14 @@ bun add @nuxt/ui tailwindcss
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
-  modules: ['@nuxt/ui']
+  modules: ['@nuxt/ui'],
+  css: ['~/assets/css/main.css']
 })
 ```
 
 2. Import Tailwind CSS and Nuxt UI in your CSS:
 
-```css [assets/css/main.css]
+```css [app/assets/css/main.css]
 @import "tailwindcss";
 @import "@nuxt/ui";
 ```
@@ -90,7 +92,9 @@ export default defineConfig({
 
 2. Use the Nuxt UI Vue plugin in your `main.ts`:
 
-```ts [main.ts]
+```ts [src/main.ts]
+import './assets/css/main.css'
+
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import ui from '@nuxt/ui/vue-plugin'
@@ -111,7 +115,7 @@ app.mount('#app')
 
 3. Import Tailwind CSS and Nuxt UI in your CSS:
 
-```css [assets/main.css]
+```css [src/assets/css/main.css]
 @import "tailwindcss";
 @import "@nuxt/ui";
 ```
@@ -120,17 +124,17 @@ Learn more in the [installation guide](https://ui.nuxt.com/docs/getting-started/
 
 ## Contribution
 
-Thank you for considering contributing to Nuxt UI. Here are a few ways you can get involved:
+Found a bug? [Open an issue](https://github.com/nuxt/ui/issues/new/choose) with a reproduction. Questions and ideas go in [Discussions](https://github.com/nuxt/ui/discussions).
 
-- Reporting Bugs: If you come across any bugs or issues, please check out the reporting bugs guide to learn how to submit a bug report.
-- Suggestions: Have any thoughts to enhance Nuxt UI? We'd love to hear them! Check out the [contribution guide](https://ui.nuxt.com/docs/getting-started/contribution) to share your suggestions.
+Before opening a pull request, read the [contribution guide](https://ui.nuxt.com/docs/getting-started/contribution) and [set up your local development environment](https://ui.nuxt.com/docs/getting-started/contribution#local-development).
 
-## Local Development
-
-Follow the docs to [set up your local development environment](https://ui.nuxt.com/docs/getting-started/contribution#local-development) and contribute.
+> [!TIP]
+> [`AGENTS.md`](https://github.com/nuxt/ui/blob/v4/AGENTS.md) gives AI coding agents the component structure, theming patterns, testing conventions and documentation guidelines they need to contribute. Agents that support it load it automatically.
 
 ## Credits
 
+- [vuejs/core](https://github.com/vuejs/core)
+- [vitejs/vite](https://github.com/vitejs/vite)
 - [nuxt/nuxt](https://github.com/nuxt/nuxt)
 - [nuxt/icon](https://github.com/nuxt/icon)
 - [nuxt/fonts](https://github.com/nuxt/fonts)

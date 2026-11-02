@@ -1,9 +1,19 @@
 <!-- eslint-disable vue/block-tag-newline -->
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/auth-form'
-import type { ButtonProps, FormProps, FormFieldProps, SeparatorProps, InputProps, CheckboxProps, SelectMenuProps, PinInputProps, IconProps, LinkPropsKeys } from '../types'
-import type { FormSchema, FormSubmitEvent, InferInput } from '../types/form'
+import type { ButtonProps } from './Button.vue'
+import type { FormProps } from './Form.vue'
+import type { FormFieldProps } from './FormField.vue'
+import type { SeparatorProps } from './Separator.vue'
+import type { InputProps } from './Input.vue'
+import type { CheckboxProps } from './Checkbox.vue'
+import type { SelectMenuProps } from './SelectMenu.vue'
+import type { PinInputProps } from './PinInput.vue'
+import type { IconProps } from './Icon.vue'
+import type { LinkPropsKeys } from './Link.vue'
+import type { FormData, FormSchema, FormSubmitEvent, InferInput } from '../types/form'
 import type { FormHTMLAttributes } from '../types/html'
 import type { NonUnion } from '../types/utils'
 import type { ComponentConfig } from '../types/tv'
@@ -45,7 +55,7 @@ export interface AuthFormProps<T extends FormSchema = FormSchema<object>, F exte
    * The element or component this component should render as.
    * @defaultValue 'div'
    */
-  as?: any
+  as?: any | { root?: any, title?: any }
   /**
    * The icon displayed above the title.
    * @IconifyIcon
@@ -85,29 +95,31 @@ export type AuthFormEmits<T extends object> = {
   submit: [payload: FormSubmitEvent<T>]
 }
 
-type DynamicFieldSlots<T, F, SlotProps = { field: F, state: T }> = Record<string, (props: SlotProps) => any> & Record<`${keyof T extends string ? keyof T : never}-field`, (props: SlotProps) => any>
+type DynamicFieldSlots<T, F, SlotProps = { field: F, state: T }> = Record<`${keyof T extends string ? keyof T : never}-field` | (string & {}), (props: SlotProps) => VNode[]>
 
-type DynamicFormFieldSlots<T> = Record<string, (props?: {}) => any> & Record<`${keyof T extends string ? keyof T : never}-${'label' | 'description' | 'hint' | 'help' | 'error'}`, (props?: {}) => any>
+type DynamicFormFieldSlots<T> = Record<`${keyof T extends string ? keyof T : never}-${'label' | 'description' | 'hint' | 'help' | 'error'}` | (string & {}), (props?: {}) => VNode[]>
 
 export type AuthFormSlots<T extends object = object, F extends AuthFormField = AuthFormField> = {
-  header(props?: {}): any
-  leading(props: { ui: AuthForm['ui'] }): any
-  title(props?: {}): any
-  description(props?: {}): any
-  providers(props?: {}): any
-  validation(props?: {}): any
-  submit(props: { loading: boolean }): any
-  footer(props?: {}): any
+  header?(props?: {}): VNode[]
+  leading?(props: { ui: AuthForm['ui'] }): VNode[]
+  title?(props?: {}): VNode[]
+  description?(props?: {}): VNode[]
+  providers?(props?: {}): VNode[]
+  separator?(props?: {}): VNode[]
+  validation?(props?: {}): VNode[]
+  submit?(props: { loading: boolean }): VNode[]
+  footer?(props?: {}): VNode[]
 } & DynamicFieldSlots<T, F> & DynamicFormFieldSlots<T>
 
 </script>
 
 <script setup lang="ts" generic="T extends FormSchema, F extends AuthFormField">
-import { reactive, ref, computed, useTemplateRef } from 'vue'
+import { reactive, shallowReactive, computed, useTemplateRef } from 'vue'
 import { Primitive } from 'reka-ui'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { useLocale } from '../composables/useLocale'
-import { omit, pick } from '../utils'
+import { omit, pick, resolveAs } from '../utils'
 import { tv } from '../utils/tv'
 import UButton from './Button.vue'
 import UIcon from './Icon.vue'
@@ -121,7 +133,7 @@ import UPinInput from './PinInput.vue'
 
 defineOptions({ inheritAttrs: false })
 
-const props = withDefaults(defineProps<AuthFormProps<T, F>>(), {
+const _props = withDefaults(defineProps<AuthFormProps<T, F>>(), {
   separator: 'or'
 })
 
@@ -132,25 +144,37 @@ type TypedAuthFormField = AuthFormField & {
   defaultValue?: FormStateType[keyof FormStateType]
 }
 
-const state = reactive<FormStateType>((props.fields as TypedAuthFormField[] || []).reduce<FormStateType>((acc, field) => {
+const state = reactive<FormStateType>((_props.fields as TypedAuthFormField[] || []).reduce<FormStateType>((acc, field) => {
   if (field.name) {
     acc[field.name] = field.defaultValue
   }
   return acc
 }, {} as FormStateType))
 
-defineEmits<AuthFormEmits<typeof state>>()
+defineEmits<AuthFormEmits<FormData<T>>>()
 const slots = defineSlots<AuthFormSlots<typeof state, F>>()
+
+const props = useComponentProps<AuthFormProps<T, F>>('authForm', _props)
 
 const { t } = useLocale()
 const appConfig = useAppConfig() as AuthForm['AppConfig']
 
 // eslint-disable-next-line vue/no-dupe-keys
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.authForm || {}) })())
+const as = computed(() => resolveAs(props.as, { root: 'div', title: 'div' }))
+
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.authForm || {}) })())
 
 const formRef = useTemplateRef('formRef')
-const passwordVisibility = ref(false)
-const passwordRef = useTemplateRef('passwordRef')
+const passwordVisibility = reactive<Record<string, boolean>>(
+  (_props.fields as TypedAuthFormField[] || []).reduce<Record<string, boolean>>((acc, field) => {
+    if (field.type === 'password' && field.name) {
+      acc[field.name as string] = false
+    }
+    return acc
+  }, {})
+)
+const passwordRefs = shallowReactive<Record<string, { inputRef?: HTMLInputElement | null } | null>>({})
 
 function pickFieldProps(field: F) {
   const fields = ['name', 'errorPattern', 'help', 'error', 'hint', 'size', 'required', 'eagerValidation', 'validateOnInputDelay'] as (keyof F)[]
@@ -186,34 +210,34 @@ defineExpose({
 </script>
 
 <template>
-  <Primitive :as="as" data-slot="root" :class="ui.root({ class: [props.ui?.root, props.class] })">
-    <div v-if="(icon || !!slots.leading) || (title || !!slots.title) || (description || !!slots.description) || !!slots.header" data-slot="header" :class="ui.header({ class: props.ui?.header })">
+  <Primitive :as="as.root" :data-slot="($attrs['data-slot'] as string | undefined) ?? 'root'" :class="ui.root({ class: [props.ui?.root, props.class] })">
+    <div v-if="(props.icon || !!slots.leading) || (props.title || !!slots.title) || (props.description || !!slots.description) || !!slots.header" data-slot="header" :class="ui.header({ class: props.ui?.header })">
       <slot name="header">
-        <div v-if="icon || !!slots.leading" data-slot="leading" :class="ui.leading({ class: props.ui?.leading })">
+        <div v-if="props.icon || !!slots.leading" data-slot="leading" :class="ui.leading({ class: props.ui?.leading })">
           <slot name="leading" :ui="ui">
-            <UIcon v-if="icon" :name="icon" data-slot="leadingIcon" :class="ui.leadingIcon({ class: props.ui?.leadingIcon })" />
+            <UIcon v-if="props.icon" :name="props.icon" data-slot="leadingIcon" :class="ui.leadingIcon({ class: props.ui?.leadingIcon })" />
           </slot>
         </div>
 
-        <div v-if="title || !!slots.title" data-slot="title" :class="ui.title({ class: props.ui?.title })">
+        <Primitive v-if="props.title || !!slots.title" :as="as.title" data-slot="title" :class="ui.title({ class: props.ui?.title })">
           <slot name="title">
-            {{ title }}
+            {{ props.title }}
           </slot>
-        </div>
+        </Primitive>
 
-        <div v-if="description || !!slots.description" data-slot="description" :class="ui.description({ class: props.ui?.description })">
+        <div v-if="props.description || !!slots.description" data-slot="description" :class="ui.description({ class: props.ui?.description })">
           <slot name="description">
-            {{ description }}
+            {{ props.description }}
           </slot>
         </div>
       </slot>
     </div>
 
     <div data-slot="body" :class="ui.body({ class: props.ui?.body })">
-      <div v-if="providers?.length || !!slots.providers" data-slot="providers" :class="ui.providers({ class: props.ui?.providers })">
+      <div v-if="props.providers?.length || !!slots.providers" data-slot="providers" :class="ui.providers({ class: props.ui?.providers })">
         <slot name="providers">
           <UButton
-            v-for="(provider, index) in providers"
+            v-for="(provider, index) in props.providers"
             :key="index"
             block
             color="neutral"
@@ -223,29 +247,31 @@ defineExpose({
         </slot>
       </div>
 
-      <USeparator
-        v-if="providers?.length && fields?.length"
-        v-bind="typeof separator === 'object' ? separator : { label: separator }"
-        data-slot="separator"
-        :class="ui.separator({ class: props.ui?.separator })"
-      />
+      <slot name="separator">
+        <USeparator
+          v-if="props.providers?.length && props.fields?.length"
+          v-bind="typeof props.separator === 'object' ? props.separator : { label: props.separator }"
+          data-slot="separator"
+          :class="ui.separator({ class: props.ui?.separator })"
+        />
+      </slot>
 
       <UForm
-        v-if="fields?.length"
+        v-if="props.fields?.length"
         ref="formRef"
         :state="state"
-        :schema="schema"
-        :validate="validate"
-        :validate-on="validateOn"
-        :disabled="disabled"
-        :loading-auto="loadingAuto"
-        data-slot="form"
+        :schema="props.schema"
+        :validate="props.validate"
+        :validate-on="props.validateOn"
+        :disabled="props.disabled"
+        :loading-auto="props.loadingAuto"
         :class="ui.form({ class: props.ui?.form })"
         v-bind="$attrs"
-        @submit="onSubmit"
+        data-slot="form"
+        @submit="props.onSubmit"
       >
         <UFormField
-          v-for="field in fields"
+          v-for="field in props.fields"
           :key="field.name"
           v-bind="pickFieldProps(field)"
         >
@@ -275,23 +301,23 @@ defineExpose({
             />
             <UInput
               v-else-if="field.type === 'password'"
-              ref="passwordRef"
+              :ref="(el: any) => { passwordRefs[field.name] = el }"
               v-model="state[field.name]"
               data-slot="password"
               :class="ui.password({ class: props.ui?.password })"
               v-bind="(omitFieldProps(field) as AuthFormInputField<'password'>)"
-              :type="passwordVisibility ? 'text' : 'password'"
+              :type="passwordVisibility[field.name] ? 'text' : 'password'"
             >
               <template #trailing>
                 <UButton
                   color="neutral"
                   variant="link"
                   size="sm"
-                  :icon="passwordVisibility ? appConfig.ui.icons.eyeOff : appConfig.ui.icons.eye"
-                  :aria-label="passwordVisibility ? t('authForm.hidePassword') : t('authForm.showPassword')"
-                  :aria-pressed="passwordVisibility"
-                  :aria-controls="passwordRef?.[0]?.inputRef?.id"
-                  @click="passwordVisibility = !passwordVisibility"
+                  :icon="passwordVisibility[field.name] ? appConfig.ui.icons.eyeOff : appConfig.ui.icons.eye"
+                  :aria-label="passwordVisibility[field.name] ? t('authForm.hidePassword') : t('authForm.showPassword')"
+                  :aria-pressed="!!passwordVisibility[field.name]"
+                  :aria-controls="passwordRefs[field.name]?.inputRef?.id"
+                  @click="passwordVisibility[field.name] = !passwordVisibility[field.name]"
                 />
               </template>
             </UInput>
@@ -323,14 +349,14 @@ defineExpose({
 
         <slot v-if="!!slots.validation" name="validation" />
 
-        <slot name="submit" :loading="loading">
+        <slot name="submit" :loading="props.loading">
           <UButton
             type="submit"
             :label="t('authForm.submit')"
             block
-            :loading="loading"
-            :loading-auto="loadingAuto"
-            v-bind="submit"
+            :loading="props.loading"
+            :loading-auto="props.loadingAuto"
+            v-bind="props.submit"
           />
         </slot>
       </UForm>

@@ -25,6 +25,7 @@ authors:
     description: antfu7
     avatar:
       src: https://github.com/antfu.png
+      loading: lazy
     to: https://github.com/antfu
     target: _blank
 to: 'https://nuxt.com/blog/nuxt-icon-v1-0'
@@ -52,6 +53,10 @@ props:
   title: 'Introducing Nuxt Icon v1'
   class: 'w-96'
 ---
+::
+
+::tip
+The title is rendered as an `h2` by default. Use the `as` prop with an object to change it, for example `:as="{ title: 'h3' }"`{lang="ts-type"}. You can also set the root element this way: `:as="{ root: 'div', title: 'h3' }"`{lang="ts-type"}.
 ::
 
 ### Description
@@ -144,8 +149,11 @@ props:
 
 Use the `image` prop to display an image in the BlogPost.
 
-::note
-If [`@nuxt/image`](https://image.nuxt.com/get-started/installation) is installed, the `<NuxtImg>` component will be used instead of the native `img` tag.
+::framework-only
+#nuxt
+:::note
+If [`@nuxt/image`](/docs/getting-started/integrations/image) is installed, the `<NuxtImg>` component will be used instead of the native `img` tag.
+:::
 ::
 
 ::component-code
@@ -204,6 +212,7 @@ props:
       description: antfu7
       avatar:
         src: https://github.com/antfu.png
+        loading: lazy
       to: https://github.com/antfu
       target: _blank
   class: 'w-96'
@@ -237,12 +246,14 @@ props:
       description: antfu7
       avatar:
         src: https://github.com/antfu.png
+        loading: lazy
       to: https://github.com/antfu
       target: _blank
     - name: Benjamin Canac
       description: benjamincanac
       avatar:
         src: https://github.com/benjamincanac.png
+        loading: lazy
       to: https://github.com/benjamincanac
       target: _blank
   class: 'w-96'

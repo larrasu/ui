@@ -2,6 +2,11 @@
 title: CommandPalette
 description: A command palette with full-text search powered by Fuse.js for efficient fuzzy matching.
 category: navigation
+keywords:
+  - command menu
+  - cmdk
+  - spotlight
+  - global search
 links:
   - label: Fuse.js
     icon: i-custom-fuse-js
@@ -45,34 +50,42 @@ props:
           suffix: 'benjamincanac'
           avatar:
             src: 'https://github.com/benjamincanac.png'
-        - label: 'Romain Hamel'
-          suffix: 'romhml'
-          avatar:
-            src: 'https://github.com/romhml.png'
-        - label: 'Sébastien Chopin'
-          suffix: 'atinux'
-          avatar:
-            src: 'https://github.com/atinux.png'
+            loading: lazy
         - label: 'Hugo Richard'
           suffix: 'HugoRCD'
           avatar:
             src: 'https://github.com/HugoRCD.png'
+            loading: lazy
+        - label: 'Sébastien Chopin'
+          suffix: 'atinux'
+          avatar:
+            src: 'https://github.com/atinux.png'
+            loading: lazy
+        - label: 'Romain Hamel'
+          suffix: 'romhml'
+          avatar:
+            src: 'https://github.com/romhml.png'
+            loading: lazy
         - label: 'Sandro Circi'
           suffix: 'sandros94'
           avatar:
             src: 'https://github.com/sandros94.png'
-        - label: 'Daniel Roe'
-          suffix: 'danielroe'
-          avatar:
-            src: 'https://github.com/danielroe.png'
+            loading: lazy
         - label: 'Jakub Michálek'
           suffix: 'J-Michalek'
           avatar:
             src: 'https://github.com/J-Michalek.png'
-        - label: 'Eugen Istoc'
-          suffix: 'genu'
+            loading: lazy
+        - label: 'Alex'
+          suffix: 'hywax'
           avatar:
-            src: 'https://github.com/genu.png'
+            src: 'https://github.com/hywax.png'
+            loading: lazy
+        - label: 'Maxime Pauvert'
+          suffix: 'maximepvrt'
+          avatar:
+            src: 'https://github.com/maximepvrt.png'
+            loading: lazy
   class: 'flex-1 h-80'
 ---
 ::
@@ -144,34 +157,42 @@ props:
           suffix: 'benjamincanac'
           avatar:
             src: 'https://github.com/benjamincanac.png'
-        - label: 'Romain Hamel'
-          suffix: 'romhml'
-          avatar:
-            src: 'https://github.com/romhml.png'
-        - label: 'Sébastien Chopin'
-          suffix: 'atinux'
-          avatar:
-            src: 'https://github.com/atinux.png'
+            loading: lazy
         - label: 'Hugo Richard'
           suffix: 'HugoRCD'
           avatar:
             src: 'https://github.com/HugoRCD.png'
+            loading: lazy
+        - label: 'Sébastien Chopin'
+          suffix: 'atinux'
+          avatar:
+            src: 'https://github.com/atinux.png'
+            loading: lazy
+        - label: 'Romain Hamel'
+          suffix: 'romhml'
+          avatar:
+            src: 'https://github.com/romhml.png'
+            loading: lazy
         - label: 'Sandro Circi'
           suffix: 'sandros94'
           avatar:
             src: 'https://github.com/sandros94.png'
-        - label: 'Daniel Roe'
-          suffix: 'danielroe'
-          avatar:
-            src: 'https://github.com/danielroe.png'
+            loading: lazy
         - label: 'Jakub Michálek'
           suffix: 'J-Michalek'
           avatar:
             src: 'https://github.com/J-Michalek.png'
-        - label: 'Eugen Istoc'
-          suffix: 'genu'
+            loading: lazy
+        - label: 'Alex'
+          suffix: 'hywax'
           avatar:
-            src: 'https://github.com/genu.png'
+            src: 'https://github.com/hywax.png'
+            loading: lazy
+        - label: 'Maxime Pauvert'
+          suffix: 'maximepvrt'
+          avatar:
+            src: 'https://github.com/maximepvrt.png'
+            loading: lazy
   class: 'flex-1'
 ---
 ::
@@ -212,34 +233,42 @@ props:
           suffix: 'benjamincanac'
           avatar:
             src: 'https://github.com/benjamincanac.png'
-        - label: 'Romain Hamel'
-          suffix: 'romhml'
-          avatar:
-            src: 'https://github.com/romhml.png'
-        - label: 'Sébastien Chopin'
-          suffix: 'atinux'
-          avatar:
-            src: 'https://github.com/atinux.png'
+            loading: lazy
         - label: 'Hugo Richard'
           suffix: 'HugoRCD'
           avatar:
             src: 'https://github.com/HugoRCD.png'
+            loading: lazy
+        - label: 'Sébastien Chopin'
+          suffix: 'atinux'
+          avatar:
+            src: 'https://github.com/atinux.png'
+            loading: lazy
+        - label: 'Romain Hamel'
+          suffix: 'romhml'
+          avatar:
+            src: 'https://github.com/romhml.png'
+            loading: lazy
         - label: 'Sandro Circi'
           suffix: 'sandros94'
           avatar:
             src: 'https://github.com/sandros94.png'
-        - label: 'Daniel Roe'
-          suffix: 'danielroe'
-          avatar:
-            src: 'https://github.com/danielroe.png'
+            loading: lazy
         - label: 'Jakub Michálek'
           suffix: 'J-Michalek'
           avatar:
             src: 'https://github.com/J-Michalek.png'
-        - label: 'Eugen Istoc'
-          suffix: 'genu'
+            loading: lazy
+        - label: 'Alex'
+          suffix: 'hywax'
           avatar:
-            src: 'https://github.com/genu.png'
+            src: 'https://github.com/hywax.png'
+            loading: lazy
+        - label: 'Maxime Pauvert'
+          suffix: 'maximepvrt'
+          avatar:
+            src: 'https://github.com/maximepvrt.png'
+            loading: lazy
   class: 'flex-1'
 ---
 ::
@@ -387,6 +416,7 @@ props:
       suffix: 'benjamincanac'
       avatar:
         src: 'https://github.com/benjamincanac.png'
+        loading: lazy
   selectedIcon: 'i-lucide-circle-check'
   groups:
     - id: 'users'
@@ -396,34 +426,42 @@ props:
           suffix: 'benjamincanac'
           avatar:
             src: 'https://github.com/benjamincanac.png'
-        - label: 'Romain Hamel'
-          suffix: 'romhml'
-          avatar:
-            src: 'https://github.com/romhml.png'
-        - label: 'Sébastien Chopin'
-          suffix: 'atinux'
-          avatar:
-            src: 'https://github.com/atinux.png'
+            loading: lazy
         - label: 'Hugo Richard'
           suffix: 'HugoRCD'
           avatar:
             src: 'https://github.com/HugoRCD.png'
+            loading: lazy
+        - label: 'Sébastien Chopin'
+          suffix: 'atinux'
+          avatar:
+            src: 'https://github.com/atinux.png'
+            loading: lazy
+        - label: 'Romain Hamel'
+          suffix: 'romhml'
+          avatar:
+            src: 'https://github.com/romhml.png'
+            loading: lazy
         - label: 'Sandro Circi'
           suffix: 'sandros94'
           avatar:
             src: 'https://github.com/sandros94.png'
-        - label: 'Daniel Roe'
-          suffix: 'danielroe'
-          avatar:
-            src: 'https://github.com/danielroe.png'
+            loading: lazy
         - label: 'Jakub Michálek'
           suffix: 'J-Michalek'
           avatar:
             src: 'https://github.com/J-Michalek.png'
-        - label: 'Eugen Istoc'
-          suffix: 'genu'
+            loading: lazy
+        - label: 'Alex'
+          suffix: 'hywax'
           avatar:
-            src: 'https://github.com/genu.png'
+            src: 'https://github.com/hywax.png'
+            loading: lazy
+        - label: 'Maxime Pauvert'
+          suffix: 'maximepvrt'
+          avatar:
+            src: 'https://github.com/maximepvrt.png'
+            loading: lazy
   class: 'flex-1'
 ---
 ::
@@ -888,6 +926,10 @@ props:
 ---
 ::
 
+::note
+This example uses `useLazyFetch` with `server: false` to fetch data on the client without blocking the initial render. The loading state checks for both `pending` and `idle` status to display a loading indicator before and during the fetch.
+::
+
 ### With ignore filter
 
 You can set the `ignoreFilter` field to `true` on a group to disable the internal search and use your own search logic.
@@ -903,7 +945,11 @@ props:
 ::
 
 ::note
-This example uses [`refDebounced`](https://vueuse.org/shared/refDebounced/#refdebounced) to debounce the API calls.
+This example uses [`refDebounced`](https://vueuse.org/shared/refDebounced/#refdebounced) to debounce the API calls. The loading state checks for both `pending` and `idle` status to display a loading indicator before and during the fetch.
+::
+
+::tip
+Set the `ignore-filter` prop to `true` to disable the internal search for every group at once. A group can opt back in by setting its `ignoreFilter` field to `false`.
 ::
 
 ### With post-filtered items
@@ -933,7 +979,7 @@ You can use the `fuse` prop to override the options of [useFuse](https://vueuse.
   fuseOptions: {
     ignoreLocation: true,
     threshold: 0.1,
-    keys: ['label', 'suffix']
+    keys: ['label', 'description', 'suffix']
   },
   resultLimit: 12,
   matchAllWhenSearchEmpty: true
@@ -941,7 +987,7 @@ You can use the `fuse` prop to override the options of [useFuse](https://vueuse.
 ```
 
 ::tip
-The `fuseOptions` are the options of [Fuse.js](https://www.fusejs.io/api/options.html), the `resultLimit` is the maximum number of results to return and the `matchAllWhenSearchEmpty` is a boolean to match all items when the search term is empty.
+The `fuseOptions` are the options of [Fuse.js](https://www.fusejs.io/), the `resultLimit` is the maximum number of results to return and the `matchAllWhenSearchEmpty` is a boolean to match all items when the search term is empty.
 ::
 
 You can for example set `{ fuseOptions: { includeMatches: true } }`{lang="ts-type"} to highlight the search term in the items.
@@ -1000,6 +1046,10 @@ props:
 ---
 ::
 
+::note
+This example uses `useLazyFetch` with `immediate: false` to only fetch data when the Modal opens.
+::
+
 ### Within a Drawer
 
 You can use the CommandPalette component inside a [Drawer](/docs/components/drawer)'s content.
@@ -1011,6 +1061,10 @@ name: 'drawer-command-palette-example'
 props:
   autofocus: false
 ---
+::
+
+::note
+This example uses `useLazyFetch` with `immediate: false` to only fetch data when the Drawer opens.
 ::
 
 ### Listen open state

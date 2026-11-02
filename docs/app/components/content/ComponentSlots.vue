@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { upperFirst, camelCase, kebabCase } from 'scule'
+import { upperFirst, camelCase } from 'scule'
 
 const props = defineProps<{
   prose?: boolean
@@ -11,7 +11,7 @@ const route = useRoute()
 const camelName = camelCase(props.slug ?? route.path.split('/').pop() ?? '')
 const name = `${props.prose ? 'Prose' : 'U'}${upperFirst(camelName)}`
 
-const meta = await fetchComponentMeta(name as any)
+const { data: meta } = await useFetchComponentMeta(name as any)
 </script>
 
 <template>
@@ -36,7 +36,7 @@ const meta = await fetchComponentMeta(name as any)
         <ProseTd>
           <HighlightInlineType v-if="slot.type" :type="slot.type" />
 
-          <MDC v-if="slot.description" :value="slot.description" class="text-toned mt-1" :cache-key="`${kebabCase(route.path)}-${slot.name}-description`" />
+          <DocsMarkdown v-if="slot.description" :value="slot.description" class="text-toned mt-1" />
         </ProseTd>
       </ProseTr>
     </ProseTbody>

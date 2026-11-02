@@ -1,8 +1,10 @@
 <script lang="ts">
 import type { CheckboxGroupRootProps, CheckboxGroupRootEmits } from 'reka-ui'
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/checkbox-group'
-import type { CheckboxProps } from '../types'
+import type { CheckboxProps } from './Checkbox.vue'
+import type { IconProps } from './Icon.vue'
 import type { AcceptableValue, GetItemKeys, GetModelValue, GetModelValueEmits } from '../types/utils'
 import type { ComponentConfig } from '../types/tv'
 
@@ -15,12 +17,17 @@ export type CheckboxGroupItem = CheckboxGroupValue | {
   description?: string
   disabled?: boolean
   value?: string
+  /**
+   * The icon displayed when checked, or above the label when `indicator` is `hidden`.
+   * @IconifyIcon
+   */
+  icon?: IconProps['name']
   class?: any
-  ui?: Pick<CheckboxGroup['slots'], 'item'> & Omit<Required<CheckboxProps>['ui'], 'root'>
+  ui?: Partial<Pick<CheckboxGroup['slots'], 'item'>> & Omit<Required<CheckboxProps>['ui'], 'root'>
   [key: string]: any
 }
 
-export interface CheckboxGroupProps<T extends CheckboxGroupItem[] = CheckboxGroupItem[], VK extends GetItemKeys<T> = 'value'> extends Pick<CheckboxGroupRootProps, 'disabled' | 'loop' | 'name' | 'required'>, Pick<CheckboxProps, 'color' | 'indicator' | 'icon'> {
+export interface CheckboxGroupProps<T extends CheckboxGroupItem[] = CheckboxGroupItem[], VK extends GetItemKeys<T> = 'value'> extends Pick<CheckboxGroupRootProps, 'disabled' | 'loop' | 'max' | 'name' | 'required'>, Pick<CheckboxProps, 'color' | 'highlight' | 'indicator' | 'icon'> {
   /**
    * The element or component this component should render as.
    * @defaultValue 'div'
@@ -68,26 +75,28 @@ export type CheckboxGroupEmits<T extends CheckboxGroupItem[] = CheckboxGroupItem
   change: [event: Event]
 } & GetModelValueEmits<T, VK, true>
 
-type SlotProps<T extends CheckboxGroupItem> = (props: { item: T & { id: string } }) => any
+type SlotProps<T extends CheckboxGroupItem> = (props: { item: T & { id: string } }) => VNode[]
 
 export interface CheckboxGroupSlots<T extends CheckboxGroupItem[] = CheckboxGroupItem[]> {
-  legend(props?: {}): any
-  label: SlotProps<T[number]>
-  description: SlotProps<T[number]>
+  legend?(props?: {}): VNode[]
+  label?: SlotProps<T[number]>
+  description?: SlotProps<T[number]>
 }
 </script>
 
 <script setup lang="ts" generic="T extends CheckboxGroupItem[], VK extends GetItemKeys<T> = 'value'">
 import { computed, useId } from 'vue'
-import { CheckboxGroupRoot, useForwardProps, useForwardPropsEmits } from 'reka-ui'
+import { CheckboxGroupRoot } from 'reka-ui'
+import { useForwardProps } from '../composables/useForwardProps'
 import { reactivePick } from '@vueuse/core'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { useFormField } from '../composables/useFormField'
 import { get, omit } from '../utils'
 import { tv } from '../utils/tv'
 import UCheckbox from './Checkbox.vue'
 
-const props = withDefaults(defineProps<CheckboxGroupProps<T, VK>>(), {
+const _props = withDefaults(defineProps<CheckboxGroupProps<T, VK>>(), {
   labelKey: 'label',
   descriptionKey: 'description',
   valueKey: 'value' as never,
@@ -96,21 +105,37 @@ const props = withDefaults(defineProps<CheckboxGroupProps<T, VK>>(), {
 const emits = defineEmits<CheckboxGroupEmits<T, VK>>()
 const slots = defineSlots<CheckboxGroupSlots<T>>()
 
+const props = useComponentProps<CheckboxGroupProps<T, VK>>('checkboxGroup', _props)
+
 const appConfig = useAppConfig() as CheckboxGroup['AppConfig']
 
-const rootProps = useForwardPropsEmits(reactivePick(props, 'as', 'modelValue', 'defaultValue', 'orientation', 'loop', 'required'), emits)
-const checkboxProps = useForwardProps(reactivePick(props, 'variant', 'indicator', 'icon'))
+const rootProps = useForwardProps(reactivePick(props, 'as', 'modelValue', 'defaultValue', 'orientation', 'loop', 'max', 'required'), emits)
+const checkboxProps = useForwardProps(reactivePick(props, 'variant', 'indicator'))
 const getProxySlots = () => omit(slots, ['legend'])
 
-const { emitFormChange, emitFormInput, color, name, size, id: _id, disabled, ariaAttrs } = useFormField<CheckboxGroupProps<T>>(props, { bind: false })
+const { emitFormChange, emitFormInput, color: formFieldColor, highlight: formFieldHighlight, name, size: formFieldSize, id: _id, disabled: formFieldDisabled, ariaAttrs } = useFormField<CheckboxGroupProps<T>>(_props, { bind: false })
 const id = _id.value ?? useId()
 
+// `color`, `size` and `highlight` are group-level only, they are not part of the item API, so
+// every child gets the group's resolved value. Resolving them here rather than at each binding
+// keeps the `tv()` call and the forwarding to `UCheckbox` in sync.
+
+const color = computed(() => formFieldColor.value ?? props.color)
+// eslint-disable-next-line vue/no-dupe-keys
+const size = computed(() => formFieldSize.value ?? props.size)
+
+const highlight = computed(() => formFieldHighlight.value ?? props.highlight)
+
+const disabled = computed(() => formFieldDisabled.value ?? props.disabled)
+
+// eslint-disable-next-line vue/no-dupe-keys
 const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.checkboxGroup || {}) })({
   size: size.value,
   required: props.required,
   orientation: props.orientation,
-  color: props.color,
+  color: color.value,
   variant: props.variant,
+  highlight: highlight.value,
   disabled: disabled.value
 }))
 
@@ -164,7 +189,7 @@ function onUpdate(value: any) {
 <template>
   <CheckboxGroupRoot
     :id="id"
-    v-bind="rootProps"
+    v-bind="(rootProps as any)"
     :name="name"
     :disabled="disabled"
     data-slot="root"
@@ -172,9 +197,9 @@ function onUpdate(value: any) {
     @update:model-value="onUpdate"
   >
     <fieldset data-slot="fieldset" :class="ui.fieldset({ class: props.ui?.fieldset })" v-bind="ariaAttrs">
-      <legend v-if="legend || !!slots.legend" data-slot="legend" :class="ui.legend({ class: props.ui?.legend })">
+      <legend v-if="props.legend || !!slots.legend" data-slot="legend" :class="ui.legend({ class: props.ui?.legend })">
         <slot name="legend">
-          {{ legend }}
+          {{ props.legend }}
         </slot>
       </legend>
 
@@ -182,7 +207,9 @@ function onUpdate(value: any) {
         v-for="item in normalizedItems"
         :key="item.value"
         v-bind="{ ...item, ...checkboxProps }"
+        :icon="item.icon ?? props.icon"
         :color="color"
+        :highlight="highlight"
         :size="size"
         :name="name"
         :disabled="item.disabled || disabled"

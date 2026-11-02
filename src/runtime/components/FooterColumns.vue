@@ -1,7 +1,9 @@
 <script lang="ts">
+import type { VNode } from 'vue'
 import type { AppConfig } from '@nuxt/schema'
 import theme from '#build/ui/footer-columns'
-import type { IconProps, LinkProps } from '../types'
+import type { IconProps } from './Icon.vue'
+import type { LinkProps } from './Link.vue'
 import type { ComponentConfig } from '../types/tv'
 
 type FooterColumns = ComponentConfig<typeof theme, AppConfig, 'footerColumns'>
@@ -13,7 +15,7 @@ export interface FooterColumnLink extends Omit<LinkProps, 'custom'> {
    */
   icon?: IconProps['name']
   class?: any
-  ui?: Pick<FooterColumns['slots'], 'item' | 'link' | 'linkLabel' | 'linkLabelExternalIcon' | 'linkLeadingIcon'>
+  ui?: Partial<Pick<FooterColumns['slots'], 'item' | 'link' | 'linkLabel' | 'linkLabelExternalIcon' | 'linkLeadingIcon'>>
 }
 
 export interface FooterColumn<T extends FooterColumnLink = FooterColumnLink> {
@@ -24,25 +26,25 @@ export interface FooterColumn<T extends FooterColumnLink = FooterColumnLink> {
 export interface FooterColumnsProps<T extends FooterColumnLink = FooterColumnLink> {
   /**
    * The element or component this component should render as.
-   * @defaultValue 'div'
+   * @defaultValue 'nav'
    */
-  as?: any
+  as?: any | { root?: any, label?: any }
   class?: any
   columns?: FooterColumn<T>[]
   ui?: FooterColumns['slots']
 }
 
-type SlotProps<T> = (props: { link: T, active: boolean, ui: FooterColumns['ui'] }) => any
+type SlotProps<T> = (props: { link: T, active: boolean, ui: FooterColumns['ui'] }) => VNode[]
 
 export interface FooterColumnsSlots<T extends FooterColumnLink = FooterColumnLink> {
-  'left'(props?: {}): any
-  'default'(props?: {}): any
-  'right'(props?: {}): any
-  'column-label'?: (props: { column: FooterColumn<T> }) => any
-  'link': SlotProps<T>
-  'link-leading': SlotProps<T>
-  'link-label'(props: { link: T, active: boolean }): any
-  'link-trailing'(props: { link: T, active: boolean }): any
+  'left'?(props?: {}): VNode[]
+  'default'?(props?: {}): VNode[]
+  'right'?(props?: {}): VNode[]
+  'column-label'?: (props: { column: FooterColumn<T> }) => VNode[]
+  'link'?: SlotProps<T>
+  'link-leading'?: SlotProps<T>
+  'link-label'?(props: { link: T, active: boolean }): VNode[]
+  'link-trailing'?(props: { link: T, active: boolean }): VNode[]
 }
 </script>
 
@@ -50,37 +52,42 @@ export interface FooterColumnsSlots<T extends FooterColumnLink = FooterColumnLin
 import { computed } from 'vue'
 import { Primitive } from 'reka-ui'
 import { useAppConfig } from '#imports'
+import { useComponentProps } from '../composables/useComponentProps'
 import { pickLinkProps } from '../utils/link'
+import { resolveAs } from '../utils'
 import { tv } from '../utils/tv'
 import ULink from './Link.vue'
 import ULinkBase from './LinkBase.vue'
 import UIcon from './Icon.vue'
 
-const props = withDefaults(defineProps<FooterColumnsProps<T>>(), {
-  as: 'nav'
-})
+const _props = defineProps<FooterColumnsProps<T>>()
 const slots = defineSlots<FooterColumnsSlots<T>>()
+
+const props = useComponentProps<FooterColumnsProps<T>>('footerColumns', _props)
 
 const appConfig = useAppConfig() as FooterColumns['AppConfig']
 
 // eslint-disable-next-line vue/no-dupe-keys
-const ui = computed(() => tv({ extend: tv(theme), ...(appConfig.ui?.footerColumns || {}) })())
+const as = computed(() => resolveAs(props.as, { root: 'nav', label: 'h3' }))
+
+// eslint-disable-next-line vue/no-dupe-keys
+const ui = computed(() => tv({ extend: theme, ...(appConfig.ui?.footerColumns || {}) })())
 </script>
 
 <template>
-  <Primitive :as="as" data-slot="root" :class="ui.root({ class: [props.ui?.root, props.class] })">
+  <Primitive :as="as.root" data-slot="root" :class="ui.root({ class: [props.ui?.root, props.class] })">
     <div v-if="!!slots.left" data-slot="left" :class="ui.left({ class: props.ui?.left })">
       <slot name="left" />
     </div>
 
-    <div v-if="!!slots.default || columns?.length" data-slot="center" :class="ui.center({ class: props.ui?.center })">
+    <div v-if="!!slots.default || props.columns?.length" data-slot="center" :class="ui.center({ class: props.ui?.center })">
       <slot>
-        <div v-for="(column, index) in columns" :key="index">
-          <h3 data-slot="label" :class="ui.label({ class: props.ui?.label })">
+        <div v-for="(column, index) in props.columns" :key="index">
+          <Primitive :as="as.label" data-slot="label" :class="ui.label({ class: props.ui?.label })">
             <slot name="column-label" :column="column">
               {{ column.label }}
             </slot>
-          </h3>
+          </Primitive>
 
           <ul data-slot="list" :class="ui.list({ class: props.ui?.list })">
             <li v-for="(link, linkIndex) in column.children" :key="linkIndex" data-slot="item" :class="ui.item({ class: [props.ui?.item, link.ui?.item] })">

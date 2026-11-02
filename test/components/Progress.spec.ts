@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import Progress from '../../src/runtime/components/Progress.vue'
-import type { ProgressProps, ProgressSlots } from '../../src/runtime/components/Progress.vue'
-import ComponentRender from '../component-render'
 import theme from '#build/ui/progress'
 
 describe('Progress', () => {
@@ -12,26 +11,26 @@ describe('Progress', () => {
   const animations = Object.keys(theme.variants.animation) as any
   const max = ['Waiting...', 'Cloning...', 'Migrating...', 'Deploying...', 'Done!']
 
-  it.each([
+  renderEach(Progress, [
     // Props
     ['with modelValue', { props: { modelValue: 50 } }],
     ['with status', { props: { modelValue: 50, status: true } }],
     ['with status inverted', { props: { modelValue: 50, status: true, inverted: true } }],
+    ['with status vertical', { props: { modelValue: 50, status: true, orientation: 'vertical' } }],
     ['with max', { props: { modelValue: 2, status: true, max } }],
     ['with max inverted', { props: { modelValue: 2, status: true, inverted: true, max } }],
     ...sizes.map((size: string) => [`with size ${size}`, { props: { size } }]),
     ...orientations.map((orientation: string) => [`with orientation ${orientation}`, { props: { orientation } }]),
     ...animations.map((animation: string) => [`with animation ${animation}`, { props: { animation } }]),
     ['with color neutral', { props: { color: 'neutral', modelValue: 50 } }],
+    ['with color neutral and max', { props: { color: 'neutral', modelValue: 2, status: true, max } }],
+    ['with custom color', { props: { color: '#8b5cf6', modelValue: 2, status: true, max } }],
     ['with as', { props: { as: 'section' } }],
     ['with class', { props: { class: 'w-48' } }],
     ['with ui', { props: { ui: { base: 'bg-default' } } }],
     // Slots
     ['with status slot', { slots: { status: () => 'Status slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: ProgressProps, slots?: Partial<ProgressSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, Progress)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(Progress, {

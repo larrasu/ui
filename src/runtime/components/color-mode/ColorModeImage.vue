@@ -8,14 +8,26 @@ export interface ColorModeImageProps extends /** @vue-ignore */ Omit<ImgHTMLAttr
 </script>
 
 <script setup lang="ts">
-import ImageComponent from '#build/ui-image-component'
+import { computed, useAttrs } from 'vue'
+import { useRuntimeConfig } from '#imports'
+import ImageComponent, { useImage } from '#build/ui-image-component'
+import { usePrefix } from '../../composables/usePrefix'
+import { resolveBaseURL } from '../../utils'
 
 defineOptions({ inheritAttrs: false })
 
-defineProps<ColorModeImageProps>()
+const props = defineProps<ColorModeImageProps>()
+
+const attrs = useAttrs()
+const image = useImage?.()
+
+const provider = computed(() => (attrs.provider as string | undefined) || image?.options.provider)
+const refinedLight = computed(() => provider.value === 'ipx' || provider.value === 'ipxStatic' ? props.light : resolveBaseURL(props.light, useRuntimeConfig().app.baseURL))
+const refinedDark = computed(() => provider.value === 'ipx' || provider.value === 'ipxStatic' ? props.dark : resolveBaseURL(props.dark, useRuntimeConfig().app.baseURL))
+const prefix = usePrefix()
 </script>
 
 <template>
-  <component :is="ImageComponent" :src="light" class="dark:hidden" v-bind="$attrs" />
-  <component :is="ImageComponent" :src="dark" class="hidden dark:block" v-bind="$attrs" />
+  <component :is="ImageComponent" :src="refinedLight" :class="prefix('dark:hidden')" v-bind="$attrs" />
+  <component :is="ImageComponent" :src="refinedDark" :class="prefix('hidden dark:block')" v-bind="$attrs" />
 </template>

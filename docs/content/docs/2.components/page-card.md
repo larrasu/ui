@@ -45,6 +45,10 @@ props:
 ---
 ::
 
+::tip
+The title is rendered as a `div` by default. Use the `as` prop with an object to render it as a heading, for example `:as="{ title: 'h3' }"`{lang="ts-type"}. You can also set the root element this way: `:as="{ root: 'section', title: 'h3' }"`{lang="ts-type"}.
+::
+
 ### Description
 
 Use the `description` prop to set the description of the card.
@@ -101,7 +105,7 @@ props:
   title: 'Tailwind CSS'
   description: 'Nuxt UI integrates with latest Tailwind CSS, bringing significant improvements.'
   icon: 'i-simple-icons-tailwindcss'
-  to: 'https://tailwindcss.com/docs/v4-beta'
+  to: 'https://tailwindcss.com/blog/tailwindcss-v4'
   target: _blank
   class: 'w-96'
 ---
@@ -126,7 +130,7 @@ props:
   title: 'Tailwind CSS'
   description: 'Nuxt UI integrates with latest Tailwind CSS, bringing significant improvements.'
   icon: 'i-simple-icons-tailwindcss'
-  to: 'https://tailwindcss.com/docs/v4-beta'
+  to: 'https://tailwindcss.com/blog/tailwindcss-v4'
   target: _blank
   variant: soft
   class: 'w-96'

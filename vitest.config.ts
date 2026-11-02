@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url'
 import { defineVitestProject } from '@nuxt/test-utils/config'
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
+import codspeedPlugin from '@codspeed/vitest-plugin'
 import ui from './src/vite'
-import { resolve } from 'pathe'
 import { glob } from 'tinyglobby'
 
 const components = await glob('./src/runtime/components/*.vue', { absolute: true })
@@ -17,9 +17,9 @@ export default defineConfig({
     silent: true,
     resolveSnapshotPath(path, extension, { config }) {
       if (config.name === 'vue') {
-        return path.replace(/\/([^/]+)\.spec\.ts$/, `/__snapshots__/$1-vue.spec.ts${extension}`)
+        return path.replace(/\/([^/]+)\.(spec|bench)\.ts$/, `/__snapshots__/$1-vue.$2.ts${extension}`)
       } else {
-        return path.replace(/\/([^/]+)\.spec\.ts$/, `/__snapshots__/$1.spec.ts${extension}`)
+        return path.replace(/\/([^/]+)\.(spec|bench)\.ts$/, `/__snapshots__/$1.$2.ts${extension}`)
       }
     },
     projects: [
@@ -27,7 +27,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'nuxt',
-          include: ['./test/components/**/**.spec.ts', './test/composables/**.spec.ts', './test/utils/**/**.spec.ts'],
+          dir: './test',
+          include: ['components/**/**.spec.ts', 'composables/**.spec.ts', 'utils/**/**.spec.ts'],
+          // Benchmarks run in the `vue` project only (happy-dom, faster); keep them
+          // out of the nuxt project so a bare `vitest bench` doesn't double-run them.
+          benchmark: { include: [] },
           environment: 'nuxt',
           environmentOptions: {
             nuxt: {
@@ -42,10 +46,15 @@ export default defineConfig({
         test: {
           name: 'vue',
           environment: 'happy-dom',
-          include: ['./test/components/**.spec.ts', './test/composables/**.spec.ts', './test/utils/**/**.spec.ts'],
+          dir: './test',
+          include: ['components/**.spec.ts', 'composables/**.spec.ts', 'utils/**/**.spec.ts', 'locale.spec.ts'],
+          benchmark: { include: ['bench/**/*.bench.ts'] },
           setupFiles: ['./test/utils/setup.ts']
         },
         plugins: [
+          // Instruments benchmarks when running under the CodSpeed runner in CI,
+          // inactive for a local `pnpm bench`.
+          codspeedPlugin(),
           vue(),
           ui({ dts: false }),
           {
@@ -53,7 +62,7 @@ export default defineConfig({
             enforce: 'pre',
             resolveId(id) {
               if (id === '@nuxt/test-utils/runtime') {
-                return resolve('./test/utils/mount')
+                return fileURLToPath(new URL('test/utils/mount.ts', import.meta.url))
               }
             }
           },
@@ -62,11 +71,15 @@ export default defineConfig({
             enforce: 'pre',
             resolveId(id) {
               if (id === '#components') {
-                return '#components'
+                // Resolve to a `\0`-prefixed virtual id so Vite treats it as a
+                // virtual module and doesn't reparse the `#` as a URL fragment.
+                // Vite 8 turns a returned `#components` into `?import#components`
+                // (empty pathname), which its builtin resolver then rejects.
+                return '\0virtual:nuxt-ui-components'
               }
             },
             load(id) {
-              if (id === '#components' || id === '?#components') {
+              if (id === '\0virtual:nuxt-ui-components') {
                 const resolvedComponents = [...vueRouterOverrides, ...vueComponents, ...components]
                 const renderedComponents = new Set<string>()
                 return resolvedComponents.map((file) => {

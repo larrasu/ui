@@ -1,18 +1,27 @@
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { camelCase, kebabCase } from 'scule'
-import { genExport } from 'knitwork'
+import { genDynamicImport, genExport, genImport } from 'knitwork'
+import { resolvePathSync } from 'mlly'
+import { normalize } from 'pathe'
 import colors from 'tailwindcss/colors'
-import { addTemplate, addTypeTemplate, hasNuxtModule, logger, updateTemplates, getLayerDirectories } from '@nuxt/kit'
+import { addTemplate, addTypeTemplate, hasNuxtModule, logger, getLayerDirectories } from '@nuxt/kit'
 import type { Nuxt, NuxtTemplate, NuxtTypeTemplate } from '@nuxt/schema'
 import type { Resolver } from '@nuxt/kit'
 import type { ModuleOptions } from './module'
-import { applyDefaultVariants, applyPrefixToObject } from './utils/theme'
+import { applyDefaultVariants, applyPrefixToObject, applyUnstyled } from './utils/theme'
 import { detectUsedComponents } from './utils/components'
 import * as theme from './theme'
 import * as themeProse from './theme/prose'
 import * as themeContent from './theme/content'
 
-export function getTemplates(options: ModuleOptions, uiConfig: Record<string, any>, nuxt?: Nuxt, resolve?: Resolver['resolve']) {
+// The classes components pass to `usePrefix`, which only adds the prefix at
+// runtime, so Tailwind never sees them prefixed
+export const prefixedClasses = ['absolute', 'dark:block', 'dark:hidden', 'dark:inline-block', 'focus:outline-none', 'hidden', 'in-[.ui-macos]:hidden', 'in-[.ui-macos]:inline', 'inset-0', 'lg:block', 'lg:flex', 'lg:hidden', 'peer', 'sm:block']
+
+// The files `experimental.componentDetection` scans for component usage
+const DETECTION_SOURCE_RE = /\.(?:vue|ts|mts|js|mjs|cjs|tsx|jsx)$/
+
+export function getTemplates(options: ModuleOptions, uiConfig: Record<string, any>, nuxt?: Nuxt, resolve?: Resolver['resolve'], vue?: { detectedComponents?: Set<string> }) {
   const templates: NuxtTemplate[] = []
 
   let hasProse = false
@@ -26,12 +35,24 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
       templates.push({
         filename: `ui/${path ? path + '/' : ''}${kebabCase(component)}.ts`,
         write: true,
+        // Built from the module options alone, so Nuxt can skip it when a file is edited
+        dependsOn: [],
         getContents: async () => {
           const template = (theme as any)[component]
           let result = typeof template === 'function' ? template(options) : template
 
+          // With `experimental.componentDetection` (Vue integration), a component
+          // detection didn't find keeps its theme file — the `#build/ui` aliases
+          // and type imports rely on it existing — but with every class blanked
+          // (like `theme.unstyled`), so the `@source "./ui";` scan yields no CSS
+          // for it. Prose has no detection and stays styled.
+          const unused = path !== 'prose' && !!vue?.detectedComponents?.size
+            && !Array.from(vue.detectedComponents).some(detected => camelCase(detected) === component)
+
           // Override default variants from nuxt.config.ts
           result = applyDefaultVariants(result, options.theme?.defaultVariants)
+          // Strip default theme classes if `unstyled` is enabled
+          result = applyUnstyled(result, options.theme?.unstyled || unused)
           // Apply Tailwind prefix if configured
           result = applyPrefixToObject(result, options.theme?.prefix)
 
@@ -63,15 +84,19 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
           if (isDev) {
             const templatePath = fileURLToPath(new URL(`./theme/${path ? `${path}/` : ''}${kebabCase(component)}`, import.meta.url))
             const themeUtilsPath = fileURLToPath(new URL('./utils/theme', import.meta.url))
+            const defaultVariantsJson = JSON.stringify(options.theme?.defaultVariants) ?? 'undefined'
+            const prefixJson = JSON.stringify(options.theme?.prefix) ?? 'undefined'
+            const unstyledJson = JSON.stringify(options.theme?.unstyled || unused) ?? 'undefined'
 
             return [
               `import template from ${JSON.stringify(templatePath)}`,
-              `import { applyDefaultVariants, applyPrefixToObject } from ${JSON.stringify(themeUtilsPath)}`,
+              `import { applyDefaultVariants, applyPrefixToObject, applyUnstyled } from ${JSON.stringify(themeUtilsPath)}`,
               ...generateVariantDeclarations(variants),
               `const options = ${JSON.stringify(options, null, 2)}`,
               `let result = typeof template === 'function' ? (template as Function)(options) : template`,
-              `result = applyDefaultVariants(result, options.theme?.defaultVariants)`,
-              `result = applyPrefixToObject(result, options.theme?.prefix)`,
+              `result = applyDefaultVariants(result, ${defaultVariantsJson})`,
+              `result = applyUnstyled(result, ${unstyledJson})`,
+              `result = applyPrefixToObject(result, ${prefixJson})`,
               `const theme = ${json}`,
               `export default result as typeof theme`
             ].join('\n\n')
@@ -87,7 +112,7 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
     }
   }
 
-  if (!!nuxt && ((hasNuxtModule('@nuxtjs/mdc') || options.mdc) || (hasNuxtModule('@nuxt/content') || options.content))) {
+  if (options.prose !== false && (options.prose || options.mdc || options.content || (!!nuxt && (hasNuxtModule('@nuxtjs/mdc') || hasNuxtModule('@nuxt/content'))))) {
     hasProse = true
 
     const path = 'prose'
@@ -97,11 +122,12 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
     templates.push({
       filename: `ui/${path}/index.ts`,
       write: true,
+      dependsOn: [],
       getContents: () => Object.keys(themeProse).map(component => `export { default as ${component} } from './${kebabCase(component)}'`).join('\n')
     })
   }
 
-  if (!!nuxt && (hasNuxtModule('@nuxt/content') || options.content)) {
+  if (options.content || (!!nuxt && hasNuxtModule('@nuxt/content'))) {
     hasContent = true
 
     writeThemeTemplate(themeContent, 'content')
@@ -110,37 +136,51 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
   writeThemeTemplate(theme)
 
   async function generateSources() {
-    if (!nuxt) {
-      return '@source "./ui";'
-    }
-
     const sources: string[] = []
-    const layers = getLayerDirectories(nuxt).map(layer => layer.app)
 
-    // Add layer sources
-    for (const layer of layers) {
-      sources.push(`@source "${layer}**/*";`)
-    }
+    // Layer + inline sources are Nuxt-only; the Vue integration relies on the
+    // user's own Vite/Tailwind setup to scan their source.
+    const layers = nuxt ? getLayerDirectories(nuxt).map(layer => layer.app) : []
 
-    // Add inline sources from Nuxt config (classes defined in config)
-    const inlineConfigs = [
-      nuxt.options.app?.rootAttrs?.class,
-      nuxt.options.app?.head?.htmlAttrs?.class,
-      nuxt.options.app?.head?.bodyAttrs?.class
-    ]
+    if (nuxt) {
+      // Add layer sources
+      for (const layer of layers) {
+        sources.push(`@source "${layer}**/*";`)
+      }
 
-    for (const value of inlineConfigs) {
-      if (value && typeof value === 'string') {
-        sources.push(`@source inline(${JSON.stringify(value)});`)
+      // Add inline sources from Nuxt config (classes defined in config)
+      const inlineConfigs = [
+        nuxt.options.app?.rootAttrs?.class,
+        nuxt.options.app?.head?.htmlAttrs?.class,
+        nuxt.options.app?.head?.bodyAttrs?.class
+      ]
+
+      for (const value of inlineConfigs) {
+        if (value && typeof value === 'string') {
+          sources.push(`@source inline(${JSON.stringify(value)});`)
+        }
       }
     }
 
-    // Add theme sources (component detection or all)
-    if (resolve && options.experimental?.componentDetection) {
+    const prefix = options.theme?.prefix
+    if (prefix) {
+      sources.push(`@source inline(${JSON.stringify(prefixedClasses.map(cls => `${prefix}:${cls}`).join(' '))});`)
+    }
+
+    // Add theme sources. With `experimental.componentDetection`, Nuxt narrows
+    // these to the detected components' files. The Vue plugin can't: its
+    // templates live inside `node_modules`, where Tailwind widens a file
+    // `@source` to a scan of its whole parent directory, so a narrowed list
+    // wouldn't narrow the CSS. It sources the whole directory instead and
+    // blanks the theme of unused components at write time (see
+    // `writeThemeTemplate`), which needs no extra directive.
+    const componentDir = resolve ? resolve('./runtime/components') : undefined
+
+    if (options.experimental?.componentDetection && nuxt && componentDir && layers.length) {
       const detectedComponents = await detectUsedComponents(
         layers,
         options.prefix!,
-        resolve('./runtime/components'),
+        componentDir,
         Array.isArray(options.experimental.componentDetection) ? options.experimental.componentDetection : undefined
       )
 
@@ -187,22 +227,7 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
     return sources.join('\n')
   }
 
-  templates.push({
-    filename: 'ui.css',
-    write: true,
-    getContents: async () => {
-      const sources = await generateSources()
-      const prefix = options.theme?.prefix ? `${options.theme.prefix}:` : ''
-
-      return `${sources}
-
-@layer base {
-  body {
-    @apply ${prefix}antialiased ${prefix}text-default ${prefix}bg-default ${prefix}scheme-light ${prefix}dark:scheme-dark;
-  }
-}
-
-@theme static {
+  const themeBlocks = `@theme static {
   --color-old-neutral-50: ${colors.neutral[50]};
   --color-old-neutral-100: ${colors.neutral[100]};
   --color-old-neutral-200: ${colors.neutral[200]};
@@ -260,18 +285,55 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
   --divide-color-bg: var(--ui-bg);
   --outline-color-default: var(--ui-border);
   --outline-color-inverted: var(--ui-border-inverted);
+  --stroke-bg: var(--ui-bg);
   --stroke-default: var(--ui-border);
   --stroke-inverted: var(--ui-border-inverted);
+  --fill-bg: var(--ui-bg);
   --fill-default: var(--ui-border);
   --fill-inverted: var(--ui-border-inverted);
 }
 `
+
+  templates.push({
+    filename: 'ui.css',
+    write: true,
+    // With component detection, the sources depend on the contents of the layer files
+    // `detectUsedComponents` scans. Otherwise only on options and which layers exist.
+    dependsOn: options.experimental?.componentDetection && nuxt
+      ? ({ path }) => DETECTION_SOURCE_RE.test(path) && getLayerDirectories(nuxt).some(layer => path.startsWith(layer.app))
+      : [],
+    getContents: async () => {
+      const sources = await generateSources()
+      const prefix = options.theme?.prefix ? `${options.theme.prefix}:` : ''
+
+      return `${sources}
+
+@layer base {
+  body {
+    @apply ${prefix}antialiased ${prefix}text-default ${prefix}bg-default ${prefix}scheme-light ${prefix}dark:scheme-dark;
+  }
+}
+
+${themeBlocks}`
     }
+  })
+
+  // Static fallback shipped in the published npm package and exposed via
+  // `package.json` `imports` so tooling that resolves `#build/ui.css` through
+  // Node module resolution (Prettier, Tailwind IntelliSense) has something to
+  // read. Strips `@source` directives (paths don't exist on consumer machines)
+  // and the body rule (runtime template handles it with the user's prefix).
+  templates.push({
+    filename: 'ui.static.css',
+    write: true,
+    dependsOn: [],
+    getContents: () => themeBlocks
   })
 
   templates.push({
     filename: 'ui/index.ts',
     write: true,
+    dependsOn: [],
     getContents: () => [
       ...Object.keys(theme).map(component => `export { default as ${component} } from './${kebabCase(component)}'`),
       ...(hasContent ? Object.keys(themeContent).map(component => `export { default as ${component} } from './content/${kebabCase(component)}'`) : []),
@@ -282,18 +344,19 @@ export function getTemplates(options: ModuleOptions, uiConfig: Record<string, an
   // FIXME: `typeof colors[number]` should include all colors from the theme
   templates.push({
     filename: 'types/ui.d.ts',
+    dependsOn: [],
     getContents: () => {
       const iconKeys = Object.keys(uiConfig?.icons || {})
       const iconUnion = iconKeys.length ? iconKeys.map(i => JSON.stringify(i)).join(' | ') : 'string'
 
       return `import * as ui from '#build/ui'
-import type { TVConfig } from '@nuxt/ui'
+import type { TVConfig, DeepRequired } from '@nuxt/ui'
 import type { defaultConfig } from 'tailwind-variants'
 import colors from 'tailwindcss/colors'
 
 type IconsConfig = Record<${iconUnion} | (string & {}), string>
 
-type NeutralColor = 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone'
+type NeutralColor = 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone' | 'taupe' | 'mauve' | 'mist' | 'olive'
 type Color = Exclude<keyof typeof colors, 'inherit' | 'current' | 'transparent' | 'black' | 'white' | NeutralColor> | (string & {})
 
 type AppConfigUI = {
@@ -306,6 +369,8 @@ type AppConfigUI = {
   tv?: typeof defaultConfig
 } & TVConfig<typeof ui>
 
+type AppConfigRuntimeUI = DeepRequired<Pick<AppConfigUI, 'colors' | 'icons' | 'tv'>> & typeof ui
+
 declare module '@nuxt/schema' {
   interface AppConfigInput {
     /**
@@ -314,6 +379,9 @@ declare module '@nuxt/schema' {
      */
     ui?: AppConfigUI
   }
+  interface CustomAppConfig {
+    ui: AppConfigRuntimeUI
+  }
 }
 
 export {}
@@ -321,13 +389,42 @@ export {}
     }
   })
 
+  // With SSR the client hydrates the server-rendered colors style, so the palette
+  // is only loaded once the colors change.
+  templates.push({
+    filename: 'ui-colors.ts',
+    write: true,
+    dependsOn: [],
+    getContents: () => {
+      const id = resolve ? normalize(resolvePathSync('tailwindcss/colors', { url: pathToFileURL(`${resolve('./runtime')}/`).href })) : 'tailwindcss/colors'
+
+      return nuxt?.options.ssr
+        ? [
+            `export const colors = undefined`,
+            `export const loadColors = () => ${genDynamicImport(id, { wrapper: false })}.then(m => m.default)`
+          ].join('\n')
+        : [
+            genImport(id, 'colors'),
+            `export { colors }`,
+            `export const loadColors = () => Promise.resolve(colors)`
+          ].join('\n')
+    }
+  })
+
   templates.push({
     filename: 'ui-image-component.ts',
     write: true,
+    // `app.components` only changes when a file is added or removed
+    dependsOn: [],
     getContents: ({ app }) => {
       const image = app?.components?.find(c => c.pascalName === 'NuxtImg' && !/nuxt(?:-nightly)?\/dist\/app/.test(c.filePath))
 
-      return image ? genExport(image.filePath, [{ name: image.export, as: 'default' }]) : 'export default "img"'
+      return [
+        image ? genExport(image.filePath, [{ name: image.export, as: 'default' }]) : 'export default "img"',
+        // an import, not a re-export: the imports plugin only rewrites `import ... from '#imports'`,
+        // a re-export would bundle every side-effectful module behind `#imports`
+        !!nuxt && hasNuxtModule('@nuxt/image', nuxt) ? `import { useImage } from '#imports'\nexport { useImage }` : 'export const useImage = undefined as undefined | (() => { options: { provider?: string } })'
+      ].join('\n')
     }
   })
 
@@ -347,12 +444,4 @@ export function addTemplates(options: ModuleOptions, nuxt: Nuxt, resolve: Resolv
   nuxt.hook('prepare:types', ({ references }) => {
     references.push({ path: resolve('./runtime/types/app.config.d.ts') })
   })
-
-  if (options.experimental?.componentDetection && nuxt.options.dev) {
-    nuxt.hook('builder:watch', async (_, path) => {
-      if (/\.(?:vue|ts|js|tsx|jsx)$/.test(path)) {
-        await updateTemplates({ filter: template => template.filename === 'ui.css' })
-      }
-    })
-  }
 }

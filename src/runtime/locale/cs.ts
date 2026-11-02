@@ -1,4 +1,4 @@
-import type { Messages } from '../types'
+import type { Messages } from '../types/locale'
 import { defineLocale } from '../composables/defineLocale'
 
 export default defineLocale<Messages>({
@@ -16,23 +16,49 @@ export default defineLocale<Messages>({
     banner: {
       close: 'Zavřít'
     },
+    breadcrumb: {
+      label: 'drobečková navigace'
+    },
     calendar: {
+      label: 'Datum události',
+      monthPicker: 'Výběr měsíce',
       nextMonth: 'Další měsíc',
       nextYear: 'Další rok',
       prevMonth: 'Předchozí měsíc',
-      prevYear: 'Předchozí rok'
+      prevYear: 'Předchozí rok',
+      yearPicker: 'Výběr roku'
     },
     carousel: {
       dots: 'Vyberte snímek k zobrazení',
       goto: 'Přejít na {slide}',
       next: 'Další',
-      prev: 'Předchozí'
+      prev: 'Předchozí',
+      roledescription: 'karusel',
+      slide: 'snímek'
+    },
+    chatAttachment: {
+      uploading: 'Nahrávání',
+      error: 'Nahrání se nezdařilo'
+    },
+    chatMessages: {
+      autoScroll: 'Posunout dolů'
     },
     chatPrompt: {
-      placeholder: 'Zde napište svůj text…'
+      placeholder: 'Zde napište svůj text…',
+      queue: 'Zprávy ve frontě',
+      sendNow: 'Odeslat nyní',
+      edit: 'Upravit',
+      remove: 'Odebrat'
     },
     chatPromptSubmit: {
-      label: 'Odeslat'
+      label: 'Odeslat',
+      reload: 'Zkusit znovu',
+      stop: 'Zastavit generování'
+    },
+    chatReasoning: {
+      thinking: 'Přemýšlí…',
+      thought: 'Přemýšlel',
+      thoughtFor: 'Přemýšlel {duration}'
     },
     colorMode: {
       dark: 'Tmavý',
@@ -46,10 +72,12 @@ export default defineLocale<Messages>({
       close: 'Zavřít',
       noData: 'Žádná data',
       noMatch: 'Žádná shoda',
-      placeholder: 'Zadejte příkaz nebo hledejte…'
+      placeholder: 'Zadejte příkaz nebo hledejte…',
+      results: 'Výsledky'
     },
     contentSearch: {
       links: 'Odkazy',
+      search: 'Výsledky',
       theme: 'Barevný režim'
     },
     contentSearchButton: {
@@ -57,6 +85,10 @@ export default defineLocale<Messages>({
     },
     contentToc: {
       title: 'Na této stránce'
+    },
+    dropdownMenu: {
+      noMatch: 'Žádná shoda',
+      search: 'Hledat…'
     },
     dashboardSearch: {
       theme: 'Barevný režim'
@@ -72,6 +104,9 @@ export default defineLocale<Messages>({
       close: 'Zavřít postranní panel',
       open: 'Otevřít postranní panel'
     },
+    drawer: {
+      close: 'Zavřít'
+    },
     error: {
       clear: 'Zpět na úvod'
     },
@@ -82,17 +117,55 @@ export default defineLocale<Messages>({
       close: 'Zavřít menu',
       open: 'Otevřít menu'
     },
+    inputDate: {
+      day: 'den',
+      dayPeriod: 'AM/PM',
+      era: 'letopočet',
+      hour: 'hodina',
+      minute: 'minuta',
+      month: 'měsíc',
+      second: 'sekunda',
+      timeZoneName: 'časové pásmo',
+      year: 'rok'
+    },
     inputMenu: {
       create: 'Vytvořit "{label}"',
       noData: 'Žádná data',
-      noMatch: 'Žádná shoda'
+      noMatch: 'Žádná shoda',
+      trigger: 'Zobrazit možnosti'
     },
     inputNumber: {
       decrement: 'Snížit',
-      increment: 'Zvýšit'
+      increment: 'Zvýšit',
+      roledescription: 'číselné pole'
+    },
+    inputRating: {
+      rate: 'Ohodnotit {value} z {length}'
+    },
+    inputTime: {
+      dayPeriod: 'AM/PM',
+      hour: 'hodina',
+      minute: 'minuta',
+      second: 'sekunda',
+      timeZoneName: 'časové pásmo'
+    },
+    listbox: {
+      noData: 'Žádná data',
+      noMatch: 'Žádná shoda',
+      search: 'Hledat…'
     },
     modal: {
       close: 'Zavřít'
+    },
+    pagination: {
+      first: 'První stránka',
+      last: 'Poslední stránka',
+      next: 'Další stránka',
+      page: 'Stránka {page}',
+      prev: 'Předchozí stránka'
+    },
+    pinInput: {
+      input: 'PIN kód, znak {index} z {length}'
     },
     pricingTable: {
       caption: 'Porovnání cenových plánů'
@@ -110,7 +183,15 @@ export default defineLocale<Messages>({
       },
       pre: {
         copy: 'Kopírovat kód do schránky'
+      },
+      prompt: {
+        copy: 'Kopírovat prompt',
+        openIn: 'Otevřít v {name}'
       }
+    },
+    sidebar: {
+      close: 'Zavřít',
+      toggle: 'Přepnout'
     },
     selectMenu: {
       create: 'Vytvořit "{label}"',
@@ -118,14 +199,30 @@ export default defineLocale<Messages>({
       noMatch: 'Žádná shoda',
       search: 'Hledat…'
     },
+    skeleton: {
+      label: 'načítání'
+    },
     slideover: {
       close: 'Zavřít'
+    },
+    slider: {
+      max: 'Maximum',
+      min: 'Minimum',
+      thumb: 'Posuvník',
+      value: 'Hodnota {index} z {total}'
+    },
+    stepper: {
+      label: 'průběh'
     },
     table: {
       noData: 'Žádná data'
     },
     toast: {
       close: 'Zavřít'
+    },
+    toaster: {
+      label: 'Oznámení',
+      viewport: 'Oznámení ({hotkey})'
     }
   }
 })

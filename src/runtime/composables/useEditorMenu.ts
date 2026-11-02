@@ -1,14 +1,15 @@
 import { ref, h, computed, unref, watch } from 'vue'
 import type { Ref, ComputedRef, MaybeRef } from 'vue'
 import { defu } from 'defu'
-import { useFilter } from 'reka-ui'
+import { useFilter } from './useFilter'
 import { computePosition } from '@floating-ui/dom'
 import type { Strategy, Placement } from '@floating-ui/dom'
 import type { Editor } from '@tiptap/vue-3'
 import { VueRenderer } from '@tiptap/vue-3'
-import type { SuggestionProps } from '@tiptap/suggestion'
+import type { SuggestionOptions, SuggestionProps } from '@tiptap/suggestion'
 import Suggestion from '@tiptap/suggestion'
 import { PluginKey } from '@tiptap/pm/state'
+import type { Plugin } from '@tiptap/pm/state'
 import type { FloatingUIOptions } from '../types/editor'
 import { buildFloatingUIMiddleware } from '../utils/editor'
 import { get, isArrayOfArray } from '../utils'
@@ -66,6 +67,10 @@ export interface EditorMenuOptions<T = any> {
    */
   options?: FloatingUIOptions
   /**
+   * Optional TipTap Suggestion matching options.
+   */
+  suggestion?: Omit<Partial<SuggestionOptions>, 'pluginKey' | 'editor' | 'char' | 'items' | 'command' | 'render'>
+  /**
    * The DOM element to append the menu to. Default is the editor's parent element.
    *
    * Sometimes the menu needs to be appended to a different DOM context due to accessibility, clipping, or z-index issues.
@@ -97,7 +102,7 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
   let scrollHandler: (() => void) | null = null
   let stopItemsWatch: (() => void) | null = null
 
-  const { contains } = useFilter({ sensitivity: 'base' })
+  const { score } = useFilter()
 
   // Helper function to cleanup menu immediately (no animation)
   const cleanupMenu = () => {
@@ -139,15 +144,33 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
   const defaultFilter = (items: T[], query: string) => {
     if (!query) return items
 
-    return items.filter((item: any) => {
-      return filterFields.some((field) => {
-        const value = get(item, field)
-        if (value === undefined || value === null) return false
+    const scored: { item: T, score: number }[] = []
 
-        const stringValue = Array.isArray(value) ? value.join(' ') : String(value)
-        return contains(stringValue, query) || contains(stringValue.replace(/[\s_-]/g, ''), query)
-      })
-    })
+    for (const item of items) {
+      let bestScore: number | null = null
+
+      for (const field of filterFields) {
+        const value = get(item as any, field)
+        if (value == null) continue
+
+        const values = Array.isArray(value) ? value.map(String) : [String(value)]
+
+        for (const v of values) {
+          const normalized = v.replace(/[\s_-]/g, '')
+          const s = Math.min(score(v, query) ?? 3, score(normalized, query) ?? 3)
+          if (bestScore === null || s < bestScore) bestScore = s
+          if (bestScore === 0) break
+        }
+        if (bestScore === 0) break
+      }
+
+      if (bestScore !== null && bestScore < 3) {
+        scored.push({ item, score: bestScore })
+      }
+    }
+
+    scored.sort((a, b) => a.score - b.score)
+    return scored.map(({ item }) => item)
   }
 
   const filter = options.filter || defaultFilter
@@ -182,9 +205,13 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
     }
 
     // Map each group and filter its items to only include those in filteredItems
-    // This respects the limit since filteredItems is already sliced
+    // Sort within each group to respect the filter's ranking order
     return groups.value
-      .map(group => group.filter(item => filteredItems.value.includes(item)))
+      .map((group) => {
+        const filtered = group.filter(item => filteredItems.value.includes(item))
+        filtered.sort((a, b) => filteredItems.value.indexOf(a) - filteredItems.value.indexOf(b))
+        return filtered
+      })
       .filter(group => group.length > 0)
   })
 
@@ -311,7 +338,8 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
     element.addEventListener('mousedown', handleMouseDown)
 
     const appendToElement = typeof options.appendTo === 'function' ? options.appendTo() : options.appendTo
-    ;(appendToElement ?? options.editor.view.dom.parentElement)?.appendChild(element)
+    const container = appendToElement ?? options.editor.view.dom.parentElement
+    container?.appendChild(element)
     if (renderer.element) {
       element.appendChild(renderer.element)
     }
@@ -467,7 +495,9 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
   }
 
   // Create the suggestion plugin
-  const plugin = Suggestion({
+  // Explicitly typed as `Plugin` since `SuggestionPluginState` is not exported by `@tiptap/suggestion`
+  const plugin: Plugin = Suggestion({
+    ...(options.suggestion || {}),
     pluginKey: pluginKeyInstance,
     editor: options.editor,
     char: options.char,
@@ -542,11 +572,6 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
 
       const handlers = {
         onStart: (suggestionProps: SuggestionProps) => {
-          // When ignoreFilter is true, always use fresh items from the reactive source
-          filteredItems.value = options.ignoreFilter
-            ? items.value.slice(0, limit)
-            : suggestionProps.items as T[]
-
           // Start at first selectable item (index 0 in selectableItems)
           selectedIndex.value = 0
 
@@ -556,6 +581,17 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
           // Store the trigger position (where the `/`, `@`, or `:` is)
           triggerClientRect = suggestionProps.clientRect as () => DOMRect | null
 
+          // The suggestion plugin emits a loading pass with placeholder (empty) items
+          // before the resolved items arrive; skip it to avoid opening with no items.
+          if (suggestionProps.loading) {
+            return
+          }
+
+          // When ignoreFilter is true, always use fresh items from the reactive source
+          filteredItems.value = options.ignoreFilter
+            ? items.value.slice(0, limit)
+            : suggestionProps.items as T[]
+
           // Only show menu if there are items
           if (!filteredItems.value.length) {
             return
@@ -564,13 +600,19 @@ export function useEditorMenu<T = any>(options: EditorMenuOptions<T>) {
           showMenu()
         },
         onUpdate: (suggestionProps: SuggestionProps) => {
+          // Update the command function
+          commandFn = (item: T) => suggestionProps.command(item)
+
+          // Skip the loading pass (placeholder items) so the menu stays mounted while the
+          // resolved items are fetched, otherwise it is destroyed and recreated on every keystroke.
+          if (suggestionProps.loading) {
+            return
+          }
+
           // When ignoreFilter is true, always use fresh items from the reactive source
           filteredItems.value = options.ignoreFilter
             ? items.value.slice(0, limit)
             : suggestionProps.items as T[]
-
-          // Update the command function
-          commandFn = (item: T) => suggestionProps.command(item)
 
           // Reset selected index if out of bounds (comparing against selectableItems)
           if (selectedIndex.value >= selectableItems.value.length) {

@@ -1,6 +1,9 @@
 ---
 description: An indicator of a numeric value or a state.
 category: element
+keywords:
+  - notification dot
+  - status dot
 links:
   - label: GitHub
     icon: i-simple-icons-github
@@ -103,9 +106,9 @@ props:
 slots:
   default: |
 
-    <UAvatar src="https://github.com/benjamincanac.png" />
+    <UAvatar src="https://github.com/benjamincanac.png" loading="lazy" />
 ---
-:u-avatar{src="https://github.com/benjamincanac.png"}
+:u-avatar{src="https://github.com/benjamincanac.png" loading="lazy"}
 ::
 
 ### Standalone

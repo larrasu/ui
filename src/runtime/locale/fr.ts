@@ -1,4 +1,4 @@
-import type { Messages } from '../types'
+import type { Messages } from '../types/locale'
 import { defineLocale } from '../composables/defineLocale'
 
 export default defineLocale<Messages>({
@@ -16,23 +16,49 @@ export default defineLocale<Messages>({
     banner: {
       close: 'Fermer'
     },
+    breadcrumb: {
+      label: 'fil d\'Ariane'
+    },
     calendar: {
+      label: 'Date de l\'événement',
+      monthPicker: 'Sélecteur de mois',
       nextMonth: 'Mois suivant',
       nextYear: 'Année suivante',
       prevMonth: 'Mois précédent',
-      prevYear: 'Année précédente'
+      prevYear: 'Année précédente',
+      yearPicker: 'Sélecteur d\'année'
     },
     carousel: {
       dots: 'Choisir la diapositive à afficher',
       goto: 'Aller à {slide}',
       next: 'Suivant',
-      prev: 'Précédent'
+      prev: 'Précédent',
+      roledescription: 'carrousel',
+      slide: 'diapositive'
+    },
+    chatAttachment: {
+      uploading: 'Envoi en cours',
+      error: 'Échec de l\'envoi'
+    },
+    chatMessages: {
+      autoScroll: 'Défiler vers le bas'
     },
     chatPrompt: {
-      placeholder: 'Écrivez votre message ici…'
+      placeholder: 'Écrivez votre message ici…',
+      queue: 'Messages en attente',
+      sendNow: 'Envoyer maintenant',
+      edit: 'Modifier',
+      remove: 'Retirer'
     },
     chatPromptSubmit: {
-      label: 'Envoyer'
+      label: 'Envoyer',
+      reload: 'Réessayer',
+      stop: 'Arrêter la génération'
+    },
+    chatReasoning: {
+      thinking: 'Réflexion en cours…',
+      thought: 'Réflexion',
+      thoughtFor: 'Réflexion pendant {duration}'
     },
     colorMode: {
       dark: 'Sombre',
@@ -46,10 +72,12 @@ export default defineLocale<Messages>({
       close: 'Fermer',
       noData: 'Aucune donnée',
       noMatch: 'Aucune donnée correspondante',
-      placeholder: 'Tapez une commande ou recherchez…'
+      placeholder: 'Tapez une commande ou recherchez…',
+      results: 'Résultats'
     },
     contentSearch: {
       links: 'Liens',
+      search: 'Résultats',
       theme: 'Thème'
     },
     contentSearchButton: {
@@ -57,6 +85,10 @@ export default defineLocale<Messages>({
     },
     contentToc: {
       title: 'Sur cette page'
+    },
+    dropdownMenu: {
+      noMatch: 'Aucune donnée correspondante',
+      search: 'Rechercher…'
     },
     dashboardSearch: {
       theme: 'Thème'
@@ -72,6 +104,9 @@ export default defineLocale<Messages>({
       close: 'Fermer la barre latérale',
       open: 'Ouvrir la barre latérale'
     },
+    drawer: {
+      close: 'Fermer'
+    },
     error: {
       clear: 'Retour à l\'accueil'
     },
@@ -82,17 +117,55 @@ export default defineLocale<Messages>({
       close: 'Fermer le menu',
       open: 'Ouvrir le menu'
     },
+    inputDate: {
+      day: 'jour',
+      dayPeriod: 'AM/PM',
+      era: 'ère',
+      hour: 'heure',
+      minute: 'minute',
+      month: 'mois',
+      second: 'seconde',
+      timeZoneName: 'fuseau horaire',
+      year: 'année'
+    },
     inputMenu: {
       create: 'Créer "{label}"',
       noData: 'Aucune donnée',
-      noMatch: 'Aucune donnée correspondante'
+      noMatch: 'Aucune donnée correspondante',
+      trigger: 'Afficher les options'
     },
     inputNumber: {
       decrement: 'Diminuer',
-      increment: 'Augmenter'
+      increment: 'Augmenter',
+      roledescription: 'champ numérique'
+    },
+    inputRating: {
+      rate: 'Noter {value} sur {length}'
+    },
+    inputTime: {
+      dayPeriod: 'AM/PM',
+      hour: 'heure',
+      minute: 'minute',
+      second: 'seconde',
+      timeZoneName: 'fuseau horaire'
+    },
+    listbox: {
+      noData: 'Aucune donnée',
+      noMatch: 'Aucune donnée correspondante',
+      search: 'Rechercher…'
     },
     modal: {
       close: 'Fermer'
+    },
+    pagination: {
+      first: 'Première page',
+      last: 'Dernière page',
+      next: 'Page suivante',
+      page: 'Page {page}',
+      prev: 'Page précédente'
+    },
+    pinInput: {
+      input: 'code PIN, caractère {index} sur {length}'
     },
     pricingTable: {
       caption: 'Comparaison des plans de prix'
@@ -110,7 +183,15 @@ export default defineLocale<Messages>({
       },
       pre: {
         copy: 'Copier le code dans le presse-papiers'
+      },
+      prompt: {
+        copy: 'Copier le prompt',
+        openIn: 'Ouvrir dans {name}'
       }
+    },
+    sidebar: {
+      close: 'Fermer',
+      toggle: 'Basculer'
     },
     selectMenu: {
       create: 'Créer "{label}"',
@@ -118,14 +199,30 @@ export default defineLocale<Messages>({
       noMatch: 'Aucune donnée correspondante',
       search: 'Rechercher…'
     },
+    skeleton: {
+      label: 'chargement'
+    },
     slideover: {
       close: 'Fermer'
+    },
+    slider: {
+      max: 'Maximum',
+      min: 'Minimum',
+      thumb: 'Curseur',
+      value: 'Valeur {index} sur {total}'
+    },
+    stepper: {
+      label: 'progression'
     },
     table: {
       noData: 'Aucune donnée'
     },
     toast: {
       close: 'Fermer'
+    },
+    toaster: {
+      label: 'Notification',
+      viewport: 'Notifications ({hotkey})'
     }
   }
 })

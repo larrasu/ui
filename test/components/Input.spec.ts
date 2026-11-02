@@ -1,11 +1,10 @@
 import { describe, it, expect, test } from 'vitest'
 import { axe } from 'vitest-axe'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { renderEach } from '../component-render'
 import { mount, flushPromises } from '@vue/test-utils'
 import Input from '../../src/runtime/components/Input.vue'
-import type { InputProps, InputSlots } from '../../src/runtime/components/Input.vue'
 import type { FormInputEvents } from '../../src/module'
-import ComponentRender from '../component-render'
 import { renderForm } from '../utils/form'
 import theme from '#build/ui/input'
 
@@ -13,7 +12,7 @@ describe('Input', () => {
   const sizes = Object.keys(theme.variants.size) as any
   const variants = Object.keys(theme.variants.variant) as any
 
-  it.each([
+  renderEach(Input, [
     // Props
     ['with id', { props: { id: 'id' } }],
     ['with name', { props: { name: 'name' } }],
@@ -34,10 +33,13 @@ describe('Input', () => {
     ['with loading and avatar', { props: { loading: true, avatar: { src: 'https://github.com/benjamincanac.png' } } }],
     ['with loading trailing', { props: { loading: true, trailing: true } }],
     ['with loading trailing and avatar', { props: { loading: true, trailing: true, avatar: { src: 'https://github.com/benjamincanac.png' } } }],
+    ['with loading trailing and leadingIcon', { props: { loading: true, trailing: true, leadingIcon: 'i-lucide-arrow-left' } }],
     ['with loadingIcon', { props: { loading: true, loadingIcon: 'i-lucide-loader' } }],
     ...sizes.map((size: string) => [`with size ${size}`, { props: { size } }]),
     ...variants.map((variant: string) => [`with primary variant ${variant}`, { props: { variant } }]),
+    ...variants.map((variant: string) => [`with primary variant ${variant} highlight`, { props: { variant, highlight: true } }]),
     ...variants.map((variant: string) => [`with neutral variant ${variant}`, { props: { variant, color: 'neutral' } }]),
+    ...variants.map((variant: string) => [`with neutral variant ${variant} highlight`, { props: { variant, color: 'neutral', highlight: true } }]),
     ['with ariaLabel', { attrs: { 'aria-label': 'Aria label' } }],
     ['with as', { props: { as: 'section' } }],
     ['with class', { props: { class: 'absolute' } }],
@@ -45,28 +47,36 @@ describe('Input', () => {
     // Slots
     ['with default slot', { slots: { default: () => 'Default slot' } }],
     ['with leading slot', { slots: { leading: () => 'Leading slot' } }],
+    ['with loading trailing and leading slot', { props: { loading: true, trailing: true }, slots: { leading: () => 'Leading slot' } }],
     ['with trailing slot', { slots: { trailing: () => 'Trailing slot' } }]
-  ])('renders %s correctly', async (nameOrHtml: string, options: { props?: InputProps, slots?: Partial<InputSlots> }) => {
-    const html = await ComponentRender(nameOrHtml, options, Input)
-    expect(html).toMatchSnapshot()
-  })
+  ])
 
-  it.each([
-    ['with .trim modifier', { props: { modelModifiers: { trim: true } } }, { input: 'input  ', expected: 'input' }],
-    ['with .number modifier', { props: { modelModifiers: { number: true } } }, { input: '42', expected: 42 }],
-    ['with .lazy modifier', { props: { modelModifiers: { lazy: true } } }, { input: 'input', expected: 'input' }],
-    ['with .nullable modifier', { props: { modelModifiers: { nullable: true } } }, { input: '', expected: null }],
-    ['with .optional modifier', { props: { modelModifiers: { optional: true } } }, { input: '', expected: undefined }]
-  ])('%s works', async (_nameOrHtml: string, options: { props?: any, slots?: any }, spec: { input: any, expected: any }) => {
-    const wrapper = mount(Input, {
-      ...options
-    })
+  renderEach(
+    Input,
+    [
+      ['with .trim modifier', { props: { modelModifiers: { trim: true } } }, { input: 'input  ', expected: 'input' }],
+      ['with .number modifier', { props: { modelModifiers: { number: true } } }, { input: '42', expected: 42 }],
+      ['with .lazy modifier', { props: { modelModifiers: { lazy: true } } }, { input: 'input', expected: 'input' }],
+      ['with .nullable modifier', { props: { modelModifiers: { nullable: true } } }, { input: '', expected: null }],
+      ['with .optional modifier', { props: { modelModifiers: { optional: true } } }, { input: '', expected: undefined }],
+      ['with .number and .nullable modifiers', { props: { modelModifiers: { number: true, nullable: true } } }, { input: '0', expected: 0 }],
+      ['with .number and .optional modifiers', { props: { modelModifiers: { number: true, optional: true } } }, { input: '0', expected: 0 }],
+      ['with .number and .nullable modifiers on an empty value', { props: { modelModifiers: { number: true, nullable: true } } }, { input: '', expected: null }],
+      ['with .number and .optional modifiers on an empty value', { props: { modelModifiers: { number: true, optional: true } } }, { input: '', expected: undefined }],
+      ['with number type and .nullable modifier', { props: { type: 'number', modelModifiers: { nullable: true } } }, { input: '0', expected: 0 }]
+    ],
+    '%s works',
+    async (_nameOrHtml, options, spec) => {
+      const wrapper = mount(Input, {
+        ...options
+      })
 
-    const input = wrapper.find('input')
-    await input.setValue(spec.input)
+      const input = wrapper.find('input')
+      await input.setValue(spec.input)
 
-    expect(wrapper.emitted()).toMatchObject({ 'update:modelValue': [[spec.expected]] })
-  })
+      expect(wrapper.emitted()).toMatchObject({ 'update:modelValue': [[spec.expected]] })
+    }
+  )
 
   it('passes accessibility tests', async () => {
     const wrapper = await mountSuspended(Input, {

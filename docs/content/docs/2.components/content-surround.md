@@ -44,12 +44,12 @@ props:
   nextIcon: 'i-lucide-chevron-right'
   surround:
   - title: ContentSearchButton
-    path: /components/content-search-button
-    stem: 3.components/content-search-button
+    path: /docs/components/content-search-button
+    stem: docs/2.components/content-search-button
     description: A pre-styled Button to open the ContentSearch modal.
   - title: ContentToc
-    path: /components/content-toc
-    stem: 3.components/content-toc
+    path: /docs/components/content-toc
+    stem: docs/2.components/content-toc
     description: A sticky Table of Contents with customizable slots.
 ---
 ::
@@ -66,7 +66,7 @@ const route = useRoute()
 
 const { data: page } = await useAsyncData(route.path, () => queryCollection('docs').path(route.path).first())
 if (!page.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
+  throw createError({ status: 404, statusText: 'Page not found', fatal: true })
 }
 </script>
 

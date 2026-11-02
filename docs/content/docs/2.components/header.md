@@ -1,6 +1,5 @@
 ---
-title: Header
-description: 'A responsive header component.'
+description: 'A responsive header for your site navigation.'
 category: layout
 links:
   - label: GitHub
@@ -182,6 +181,23 @@ props:
 ::
 
 ## Examples
+
+### With animated toggle
+
+Use the `#toggle` slot to replace the default toggle button with a custom animated hamburger icon using [Motion Vue](https://motion.dev/docs/vue/motion-component).
+
+::component-example
+---
+collapse: true
+iframe:
+  height: 300px;
+iframeMobile: true
+overflowHidden: true
+name: 'header-toggle-animated-example'
+props:
+  class: 'w-full'
+---
+::
 
 ### Within `app.vue`
 
